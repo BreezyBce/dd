@@ -1,0 +1,40 @@
+run = "npm run prod"
+entrypoint = "server.js"
+modules = ["nodejs-20"]
+
+[nix]
+channel = "stable-22_11"
+
+[env]
+PATH = "/home/runner/$REPL_SLUG/.config/npm/node_global/bin:/home/runner/$REPL_SLUG/node_modules/.bin:$PATH"
+npm_config_prefix = "/home/runner/$REPL_SLUG/.config/npm/node_global"
+
+
+
+[packager]
+language = "nodejs"
+
+[packager.features]
+packageSearch = true
+guessImports = true
+enabledForHosting = false
+
+[languages]
+
+[languages.javascript]
+pattern = "**/{*.js,*.jsx,*.ts,*.tsx}"
+
+[languages.javascript.languageServer]
+start = "typescript-language-server --stdio"
+
+[deployment]
+run = ["sh", "-c", "npm run build && node server.js"]
+deploymentTarget = "cloudrun"
+
+[[ports]]
+localPort = 3000
+externalPort = 80
+
+[[ports]]
+localPort = 9005
+externalPort = 3000

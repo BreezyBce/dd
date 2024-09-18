@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Dude - All-in-One App for Your Daily Life</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/script.js"></script>
+
+<!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Dela+Gothic+One&family=Protest+Guerrilla&display=swap" rel="stylesheet">
+
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+</head>
+<body class="font-sans text-gray-800">
+    <header class="sticky-header bg-dd-blue text-white p-4 flex justify-between items-center">
+        <div class="logo">
+            <img src="img/logo.webp" alt="Daily Dude Logo" width="75" height="75">
+        </div>
+        <nav>
+            <ul class="flex space-x-8">
+                <li><a href="#about" class="hover:text-dd-orange smooth-scroll">About</a></li>
+                <li><a href="#pricing" class="hover:text-dd-orange smooth-scroll">Pricing</a></li>
+                <li><a href="#testimonials" class="hover:text-dd-orange smooth-scroll">Testimonials</a></li>
+                <li><a href="#faq" class="hover:text-dd-orange smooth-scroll">FAQ</a></li>
+                <li><a href="#contact" class="hover:text-dd-orange smooth-scroll">Contact</a></li>
+            </ul>
+        </nav>
+        <button class="bg-dd-orange text-white px-4 py-2 rounded hover:bg-opacity-90">Sign In</button>
+    </header>
+
+    <section class="hero bg-gray-100 py-20 text-center">
+        <h1 class="text-4xl font-bold mb-4">Welcome to Daily Dude</h1>
+        <p class="text-xl mb-8">Your All-in-One App for a Better Daily Life</p>
+        <img src="/api/placeholder/800/400" alt="Daily Dude Interface" class="mx-auto rounded-lg shadow-lg">
+    </section>
+
+    <section id="about" class="py-20">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold mb-8 text-center">What's Daily Dude?</h2>
+            <p class="text-xl text-center max-w-3xl mx-auto">Daily Dude is an All-in-One app designed to make your daily life easier. It combines multiple functionalities to streamline your routine and boost your productivity.</p>
+        </div>
+    </section>
+
+    <section id="pricing" class="py-20 bg-white">
+        <div class="container mx-auto px-4">
+            <h2 class="text-4xl font-bold mb-12 text-center">Pricing Plans</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                <div class="pricing-card basic">
+                    <h3 class="text-xl font-bold mb-2">Basic plan</h3>
+                    <p class="text-gray-600 mb-4">Our most popular plan.</p>
+                    <p class="text-5xl font-bold mb-6">$10</p>
+                    <button class="w-full bg-gray-800 text-white py-2 rounded-md font-semibold hover:bg-gray-700 transition duration-300">Get started</button>
+                </div>
+                <div class="pricing-card business">
+                    <h3 class="text-xl font-bold mb-2">Business plan</h3>
+                    <p class="text-gray-600 mb-4">Best for growing teams.</p>
+                    <p class="text-5xl font-bold mb-6">$20</p>
+                    <button class="w-full bg-gray-800 text-white py-2 rounded-md font-semibold hover:bg-gray-700 transition duration-300">Get started</button>
+                </div>
+                <div class="pricing-card enterprise">
+                    <h3 class="text-xl font-bold mb-2">Enterprise plan</h3>
+                    <p class="text-gray-600 mb-4">Best for large teams.</p>
+                    <p class="text-5xl font-bold mb-6">$40</p>
+                    <button class="w-full bg-gray-800 text-white py-2 rounded-md font-semibold hover:bg-gray-700 transition duration-300">Get started</button>
+                </div>
+            </div>
+            <div class="pricing-table">
+                <table class="w-full">
+                    <thead>
+                        <tr>
+                            <th class="w-1/4">Reporting and analytics</th>
+                            <th class="w-1/4">Basic</th>
+                            <th class="w-1/4">Business</th>
+                            <th class="w-1/4">Enterprise</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Basic features ⓘ</td>
+                            <td>✓</td>
+                            <td>✓</td>
+                            <td>✓</td>
+                        </tr>
+                        <tr>
+                            <td>Users ⓘ</td>
+                            <td>10</td>
+                            <td>20</td>
+                            <td>Unlimited</td>
+                        </tr>
+                        <tr>
+                            <td>Individual data ⓘ</td>
+                            <td>20GB</td>
+                            <td>40GB</td>
+                            <td>Unlimited</td>
+                        </tr>
+                        <tr>
+                            <td>Support ⓘ</td>
+                            <td>✓</td>
+                            <td>✓</td>
+                            <td>✓</td>
+                        </tr>
+                        <tr>
+                            <td>Automated workflows ⓘ</td>
+                            <td>-</td>
+                            <td>✓</td>
+                            <td>✓</td>
+                        </tr>
+                        <tr>
+                            <td>200+ integrations ⓘ</td>
+                            <td>-</td>
+                            <td>✓</td>
+                            <td>✓</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table class="w-full mt-8">
+                    <thead>
+                        <tr>
+                            <th class="w-1/4">Reporting and analytics</th>
+                            <th class="w-1/4">Basic</th>
+                            <th class="w-1/4">Business</th>
+                            <th class="w-1/4">Enterprise</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Analytics ⓘ</td>
+                            <td>Basic</td>
+                            <td>Advanced</td>
+                            <td>Advanced</td>
+                        </tr>
+                        <tr>
+                            <td>Export reports ⓘ</td>
+                            <td>✓</td>
+                            <td>✓</td>
+                            <td>✓</td>
+                        </tr>
+                        <tr>
+                            <td>Scheduled reports ⓘ</td>
+                            <td>✓</td>
+                            <td>✓</td>
+                            <td>✓</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section id="testimonials" class="py-20">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold mb-12 text-center">Testimonials</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <img src="/api/placeholder/64/64" alt="User 1" class="w-16 h-16 rounded-full mb-4">
+                    <p class="mb-4">"Daily Dude has completely transformed my daily routine. I can't imagine my life without it now!"</p>
+                    <p class="font-semibold">- Sarah J.</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <img src="/api/placeholder/64/64" alt="User 2" class="w-16 h-16 rounded-full mb-4">
+                    <p class="mb-4">"The productivity boost I've experienced with Daily Dude is incredible. It's a game-changer!"</p>
+                    <p class="font-semibold">- Mike R.</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <img src="/api/placeholder/64/64" alt="User 3" class="w-16 h-16 rounded-full mb-4">
+                    <p class="mb-4">"I love how Daily Dude integrates all the features I need into one sleek app. Highly recommended!"</p>
+                    <p class="font-semibold">- Emily T.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="faq" class="py-20 bg-gray-100">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold mb-12 text-center">Frequently Asked Questions</h2>
+            <div class="space-y-4">
+                <div class="border-b border-gray-200">
+                    <button class="flex justify-between items-center w-full py-4 text-left" onclick="toggleAccordion(this)">
+                        <span class="text-lg font-semibold">What is Daily Dude?</span>
+                        <svg class="w-6 h-6 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div class="hidden pb-4">
+                        <p>Daily Dude is an all-in-one app designed to streamline your daily tasks and boost productivity. It combines various features to help you manage your time, tasks, and personal goals effectively.</p>
+                    </div>
+                </div>
+                <div class="border-b border-gray-200">
+                    <button class="flex justify-between items-center w-full py-4 text-left" onclick="toggleAccordion(this)">
+                        <span class="text-lg font-semibold">How much does Daily Dude cost?</span>
+                        <svg class="w-6 h-6 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div class="hidden pb-4">
+                        <p>Daily Dude offers three pricing tiers: Basic ($10/month), Business ($20/month), and Enterprise ($40/month). Each plan comes with different features and user limits to suit various needs and team sizes.</p>
+                    </div>
+                </div>
+                <div class="border-b border-gray-200">
+                    <button class="flex justify-between items-center w-full py-4 text-left" onclick="toggleAccordion(this)">
+                        <span class="text-lg font-semibold">Is there a free trial available?</span>
+                        <svg class="w-6 h-6 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div class="hidden pb-4">
+                        <p>Yes, we offer a 14-day free trial for all new users. This allows you to explore Daily Dude's features and decide which plan best suits your needs before committing to a subscription.</p>
+                    </div>
+                </div>
+                <div class="border-b border-gray-200">
+                    <button class="flex justify-between items-center w-full py-4 text-left" onclick="toggleAccordion(this)">
+                        <span class="text-lg font-semibold">Can I switch between plans?</span>
+                        <svg class="w-6 h-6 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div class="hidden pb-4">
+                        <p>Absolutely! You can upgrade or downgrade your plan at any time.
+                            When upgrading, you'll have immediate access to the new features. When downgrading, the changes will take effect at the start of your next billing cycle.</p>
+                    </div>
+                </div>
+                <div class="border-b border-gray-200">
+                    <button class="flex justify-between items-center w-full py-4 text-left" onclick="toggleAccordion(this)">
+                        <span class="text-lg font-semibold">Is my data secure with Daily Dude?</span>
+                        <svg class="w-6 h-6 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div class="hidden pb-4">
+                        <p>Yes, we take data security very seriously. Daily Dude uses industry-standard encryption protocols to protect your data. We also offer features like two-factor authentication to ensure the highest level of account security.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="py-20">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold mb-12 text-center">Contact Us</h2>
+            <form class="max-w-lg mx-auto">
+                <div class="mb-4">
+                    <label for="name" class="block mb-2">Name</label>
+                    <input type="text" id="name" name="name" class="w-full px-3 py-2 border rounded" required>
+                </div>
+                <div class="mb-4">
+                    <label for="email" class="block mb-2">Email</label>
+                    <input type="email" id="email" name="email" class="w-full px-3 py-2 border rounded" required>
+                </div>
+                <div class="mb-4">
+                    <label for="message" class="block mb-2">Message</label>
+                    <textarea id="message" name="message" rows="4" class="w-full px-3 py-2 border rounded" required></textarea>
+                </div>
+                <button type="submit" class="bg-dd-blue text-white px-4 py-2 rounded hover:bg-opacity-90">Send Message</button>
+            </form>
+        </div>
+    </section>
+
+    <footer class="bg-dd-blue text-white py-8">
+        <div class="container mx-auto px-4 text-center">
+            <img src="img/logo.webp" alt="Daily Dude Logo" width="75" height="75" class="mx-auto">
+            <nav class="mb-4">
+                <a href="#" class="mx-2 hover:text-dd-orange">Terms of Service</a>
+                <a href="#" class="mx-2 hover:text-dd-orange">Privacy Policy</a>
+                <a href="#" class="mx-2 hover:text-dd-orange">Cookie Policy</a>
+            </nav>
+            <p>&copy; 2024 Daily Dude. All rights reserved.</p>
+        </div>
+    </footer>
+
+     
+</body>
+</html>

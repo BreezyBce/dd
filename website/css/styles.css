@@ -1,0 +1,55 @@
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Anton", sans-serif;
+}
+
+nav { font-family:"Roboto", sans-serif; text-transform:uppercase; }
+
+.sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    transition: background-color 0.3s ease;
+}
+
+/* Optional: Change header background on scroll */
+.sticky-header.scrolled {
+    
+}
+
+
+/* Rest of your CSS styles */
+
+.bg-dd-blue { background-color: #02afbd; }
+.bg-dd-orange { background-color: #fa7c30; }
+.text-dd-blue { color: #02afbd; }
+.text-dd-orange { color: #fa7c30; }
+.hover\:text-dd-orange:hover { color: #fa7c30; }
+.dd-blue { fill: #02afbd; }
+.dd-orange { stroke: #fa7c30; }
+
+.pricing-card {
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+}
+.pricing-card.basic { background-color: #E6E6FA; }
+.pricing-card.business { background-color: #FFF5E6; }
+.pricing-card.enterprise { background-color: #E6F3FF; }
+
+.pricing-table td, .pricing-table th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+}
+.pricing-table tr {
+    border-bottom: 1px solid #E5E7EB;
+}
+.pricing-table tr:last-child {
+    border-bottom: none;
+}
