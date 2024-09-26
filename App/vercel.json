@@ -1,11 +1,18 @@
+
+
+
 {
   "builds": [
     {
-      "src": "DailyDude/package.json",
+      "src": "frontend/package.json",
       "use": "@vercel/static-build"
+    },
+    {
+      "src": "backend/**/*.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/api/(.*)", "dest": "/backend/$1" }
   ]
 }
