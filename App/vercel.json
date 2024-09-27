@@ -2,23 +2,23 @@
   "version": 2,
   "builds": [
     {
-      "src": "DailyDude/package.json",
+      "src": "/DailyDude/package.json",
       "use": "@vercel/static-build",
       "config": { "distDir": "dist" }
     },
     {
-      "src": "DailyDudeBackend/api/index.js",
+      "src": "/DailyDudeBackend/api/index.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "DailyDudeBackend/api/index.js"
+      "dest": "/DailyDudeBackend/api/index.js"
     },
     {
       "src": "/(.*)",
-      "dest": "DailyDude/dist/$1"
+      "dest": "/DailyDude/dist/$1"
     }
   ]
 }
