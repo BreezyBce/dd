@@ -127,7 +127,7 @@ app.post('/api/translate', async (req, res) => {
 app.get('/api/exchange-rate', async (req, res) => {
   const { from, to } = req.query;
   try {
-    const response = await axios.get(`https://v6.exchangerate-api.com/v6/${process.env.EXCHANGE_RATE_API_KEY}/pair/${from}/${to}`);
+    const response = await axios.get(`https://v6.exchangerate-api.com/v6/${process.env.VITE_EXCHANGE_RATE_API_KEY}/pair/${from}/${to}`);
     res.json({ conversionRate: response.data.conversion_rate });
   } catch (error) {
     console.error('Exchange rate error:', error);
