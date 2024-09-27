@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import Stripe from 'stripe';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import axios from 'axios';
 
 dotenv.config();
 
@@ -34,6 +35,12 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
 
 app.get('/api/hello', (req, res) => {
   res.json({ message: 'Server is running' });
@@ -86,6 +93,40 @@ app.post('/api/create-checkout-session', async (req, res) => {
     console.error('Error creating checkout session:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+app.post('/api/translate', async (req, res) => {
+  console.log('Received translation request');
+  console.log('Request body:', req.body);
+  const { text, from, to } = req.body;
+
+  if (!text || !from || !to) {
+    console.log('Missing required fields in translation request');
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    const response = await axios.post(
+      `https://translation.googleapis.com/language/translate/v2?key=${process.env.GOOGLE_TRANSLATE_API_KEY}`,
+      {
+        q: text,
+        source: from,
+        target: to,
+        format: 'text'
+      }
+    );
+    console.log('Translation successful');
+    res.json({ translatedText: response.data.data.translations[0].translatedText });
+  } catch (error) {
+    console.error('Translation error:', error.response ? error.response.data : error.message);
+    res.status(500).json({ error: 'An error occurred during translation' });
+  }
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
 });
 
 // Export the Express API
