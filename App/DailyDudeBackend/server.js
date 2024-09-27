@@ -30,7 +30,7 @@ try {
 
 const db = getFirestore();
 
-const corsOrigin = process.env.CORS_ORIGIN || 'https://9c5eb817-ce12-49ab-afcc-0b65201692cf-00-1lk2hpocsnn10.kirk.replit.dev';
+const corsOrigin = process.env.CORS_ORIGIN || 'https://dd-mu-five.vercel.app/';
 
 app.use(cors({
   origin: corsOrigin,
