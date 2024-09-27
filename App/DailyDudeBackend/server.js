@@ -99,11 +99,4 @@ app.get('/', (req, res) => {
 });
 
 
-
-// Replit-specific server setup
-const port = process.env.PORT || 3000;
-const server = app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-  console.log('Server URL:', `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);
-});
-
+module.exports = app;
