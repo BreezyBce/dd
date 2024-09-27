@@ -5,32 +5,26 @@ import Stripe from 'stripe';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-
 dotenv.config();
 
-const app = express();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Test route
-app.get('/', (req, res) => {
-  res.json({ message: 'Server is running' });
-});
-
 // Initialize Firebase Admin
+let db;
 try {
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
   initializeApp({
     credential: cert(serviceAccount)
   });
   console.log('Firebase Admin SDK initialized successfully');
+  db = getFirestore();
 } catch (error) {
   console.error('Error initializing Firebase Admin SDK:', error);
-  process.exit(1);
 }
 
-const db = getFirestore();
+const app = express();
 
-const corsOrigin = process.env.CORS_ORIGIN || 'https://dd-mu-five.vercel.app/';
+const corsOrigin = process.env.CORS_ORIGIN || 'https://dd-mu-five.vercel.app';
 
 app.use(cors({
   origin: corsOrigin,
@@ -39,34 +33,32 @@ app.use(cors({
   credentials: true,
 }));
 
-
-
 app.use(express.json());
 
-app.get('/', (req, res) => {
+app.get('/api/hello', (req, res) => {
   res.json({ message: 'Server is running' });
 });
 
-    app.post('/create-checkout-session', async (req, res) => {
-        console.log('Received request for checkout session');
-        console.log('Request body:', req.body);
-        const { priceId, userId } = req.body;
+app.post('/api/create-checkout-session', async (req, res) => {
+  console.log('Received request for checkout session');
+  console.log('Request body:', req.body);
+  const { priceId, userId } = req.body;
 
-        if (!userId) {
-          console.log('UserId is missing in the request');
-          return res.status(400).json({ error: 'UserId is required' });
-        }
+  if (!userId) {
+    console.log('UserId is missing in the request');
+    return res.status(400).json({ error: 'UserId is required' });
+  }
 
-        try {
-          console.log('Attempting to fetch user document for userId:', userId);
-          const userDoc = await db.collection('users').doc(userId).get();
+  try {
+    console.log('Attempting to fetch user document for userId:', userId);
+    const userDoc = await db.collection('users').doc(userId).get();
 
-          if (!userDoc.exists) {
-            console.log('User not found in Firestore:', userId);
-            return res.status(404).json({ error: 'User not found' });
-          }
+    if (!userDoc.exists) {
+      console.log('User not found in Firestore:', userId);
+      return res.status(404).json({ error: 'User not found' });
+    }
 
-          console.log('User found:', userDoc.data());
+    console.log('User found:', userDoc.data());
     
     const userData = userDoc.data();
 
@@ -88,9 +80,7 @@ app.get('/', (req, res) => {
       success_url: `${process.env.CLIENT_URL}/subscription?success=true`,
       cancel_url: `${process.env.CLIENT_URL}/subscription?canceled=true`,
     });
-
-
-        
+    
     res.json({ url: session.url });
   } catch (error) {
     console.error('Error creating checkout session:', error);
@@ -98,5 +88,5 @@ app.get('/', (req, res) => {
   }
 });
 
-
-module.exports = app;
+// Export the Express API
+export default app;
