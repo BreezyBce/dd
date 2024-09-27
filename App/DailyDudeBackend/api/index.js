@@ -126,12 +126,17 @@ app.post('/api/translate', async (req, res) => {
 
 app.get('/api/exchange-rate', async (req, res) => {
   const { from, to } = req.query;
+  
+  if (!from || !to) {
+    return res.status(400).json({ error: 'Missing required parameters' });
+  }
+
   try {
-    const response = await axios.get(`https://v6.exchangerate-api.com/v6/${process.env.VITE_EXCHANGE_RATE_API_KEY}/pair/${from}/${to}`);
+    const response = await axios.get(`https://v6.exchangerate-api.com/v6/${process.env.EXCHANGE_RATE_API_KEY}/pair/${from}/${to}`);
     res.json({ conversionRate: response.data.conversion_rate });
   } catch (error) {
-    console.error('Exchange rate error:', error);
-    res.status(500).json({ error: 'Failed to fetch exchange rate' });
+    console.error('Exchange rate error:', error.response ? error.response.data : error.message);
+    res.status(error.response?.status || 500).json({ error: 'Failed to fetch exchange rate' });
   }
 });
 
