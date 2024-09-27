@@ -11,7 +11,7 @@
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const API_BASE_URL = 'https://dd-mu-five.vercel.app/';
+    const API_BASE_URL = 'https://dd-mu-five.vercel.app';
 
     const languages = [
       { code: 'en', name: 'English' },
