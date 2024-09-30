@@ -28,24 +28,25 @@ const CurrencyConverter = () => {
     }
   }, [amount, exchangeRate]);
 
-  const fetchExchangeRate = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/exchange-rate`, {
-        params: { from: fromCurrency, to: toCurrency }
-      });
-      if (response.data && response.data.conversionRate) {
-        setExchangeRate(response.data.conversionRate);
-      } else {
-        throw new Error('Invalid response from server');
-      }
-    } catch (error) {
-      console.error('Error fetching exchange rate:', error);
-      setError('Failed to fetch exchange rate. Please try again later.');
+const fetchExchangeRate = async () => {
+  setIsLoading(true);
+  setError(null);
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/exchange-rate`, {
+      params: { from: fromCurrency, to: toCurrency },
+      withCredentials: true  // Add this line
+    });
+    if (response.data && response.data.conversionRate) {
+      setExchangeRate(response.data.conversionRate);
+    } else {
+      throw new Error('Invalid response from server');
     }
-    setIsLoading(false);
-  };
+  } catch (error) {
+    console.error('Error fetching exchange rate:', error);
+    setError('Failed to fetch exchange rate. Please try again later.');
+  }
+  setIsLoading(false);
+};
 
   const currencies = [
     'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'HKD', 'NZD',
