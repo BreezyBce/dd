@@ -11,7 +11,7 @@
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const API_BASE_URL = 'https://dd-mu-five.vercel.app';
+    const API_BASE_URL = '/api';
 
     const languages = [
       { code: 'en', name: 'English' },
@@ -45,7 +45,7 @@
       setIsLoading(true);
       setError('');
       try {
-        const response = await axios.post(`${API_BASE_URL}/api/translate`, {
+        const response = await axios.post(`${API_BASE_URL}/translate`, {
           text: text,
           from: from,
           to: to,
