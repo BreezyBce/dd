@@ -16,7 +16,7 @@ const WeatherForecast = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await makeApiCall(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${import.meta.env.VITE_OPENWEATHERMAP_API_KEY}&units=metric`);
+      const data = await makeApiCall(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${import.meta.env.OPENWEATHERMAP_API_KEY}&units=metric`);
       setWeather(data);
     } catch (error) {
       if (error.message === 'This feature requires a premium subscription') {
@@ -36,7 +36,7 @@ const WeatherForecast = () => {
       const response = await axios.get(`https://api.openweathermap.org/data/2.5/weather`, {
         params: {
           q: city,
-          appid: import.meta.env.VITE_OPENWEATHERMAP_API_KEY,
+          appid: import.meta.env.OPENWEATHERMAP_API_KEY,
           units: 'metric'
         }
       });
@@ -55,7 +55,7 @@ const WeatherForecast = () => {
       const response = await axios.get('https://wft-geo-db.p.rapidapi.com/v1/geo/cities', {
         params: { namePrefix: input, limit: '5' },
         headers: {
-          'X-RapidAPI-Key': import.meta.env.VITE_RAPIDAPI_KEY,
+          'X-RapidAPI-Key': import.meta.env.RAPIDAPI_KEY,
           'X-RapidAPI-Host': 'wft-geo-db.p.rapidapi.com'
         }
       });
