@@ -2,11 +2,11 @@
   "version": 2,
   "builds": [
     {
-      "src": "DailyDude/package.json",
+      "src": "package.json",
       "use": "@vercel/static-build",
       "config": { 
         "distDir": "dist",
-        "buildCommand": "cd DailyDude && npm install && npm run build"
+        "buildCommand": "npm run build"
       }
     },
     {
