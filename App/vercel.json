@@ -10,21 +10,21 @@
       }
     },
     {
-      "src": "DailyDudeBackend/api/index.js",
+      "src": "api/index.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "DailyDudeBackend/api/index.js"
+      "dest": "/api/index.js"
     },
     {
       "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "DailyDude/dist/$1"
+      "dest": "/index.html"
     }
   ]
 }
