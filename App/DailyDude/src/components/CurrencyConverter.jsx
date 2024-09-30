@@ -32,7 +32,7 @@ const fetchExchangeRate = async () => {
   setIsLoading(true);
   setError(null);
   try {
-    const response = await axios.get(`${API_BASE_URL}/api/exchange-rate`, {
+    const response = await axios.get(`${API_BASE_URL}/exchange-rate`, {
       params: { from: fromCurrency, to: toCurrency },
       withCredentials: true  // Add this line
     });
