@@ -29,7 +29,7 @@ const corsOrigin = process.env.CORS_ORIGIN || 'https://dd-mu-five.vercel.app';
 
 app.use(cors({
   origin: corsOrigin,
-  methods: ['GET', 'POST', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 }));
@@ -46,7 +46,7 @@ app.get('/api/hello', (req, res) => {
   res.json({ message: 'Server is running' });
 });
 
-app.post('/create-checkout-session', async (req, res) => {
+app.post('/api/create-checkout-session', async (req, res) => {
   console.log('Received request for checkout session');
   console.log('Request body:', req.body);
   const { priceId, userId } = req.body;
@@ -95,7 +95,7 @@ app.post('/create-checkout-session', async (req, res) => {
   }
 });
 
-app.post('/translate', async (req, res) => {
+app.post('/api/translate', async (req, res) => {
   console.log('Received translation request');
   console.log('Request body:', req.body);
   const { text, from, to } = req.body;
@@ -124,7 +124,7 @@ app.post('/translate', async (req, res) => {
 });
 
 
-app.get('/exchange-rate', async (req, res) => {
+app.get('/api/exchange-rate', async (req, res) => {
   const { from, to } = req.query;
   
   console.log('Received exchange rate request:', { from, to });
