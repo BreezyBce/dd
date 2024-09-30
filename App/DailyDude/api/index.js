@@ -152,4 +152,5 @@ app.use((err, req, res, next) => {
 });
 
 // Export the Express API
-module.exports = app;
+export default app;
+
