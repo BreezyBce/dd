@@ -5,6 +5,7 @@ import Stripe from 'stripe';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import axios from 'axios';
+import 'dotenv/config';
 
 dotenv.config();
 
