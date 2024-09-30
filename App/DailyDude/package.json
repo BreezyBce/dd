@@ -5,8 +5,10 @@
   "description": "Daily Dude - All-in-One App",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "start": "node server.js",
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
     "prod": "npm run build && npm run start"
   },
   "keywords": [],
