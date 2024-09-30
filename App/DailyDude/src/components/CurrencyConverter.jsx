@@ -16,7 +16,7 @@ const CurrencyConverter = () => {
   const { subscriptionStatus } = useSubscription();
   
 
-  const API_BASE_URL = 'https://dd-mu-five.vercel.app';
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     fetchExchangeRate();
