@@ -5,10 +5,14 @@ export default async function handler(req, res) {
     try {
       const { priceId, userId } = req.body;
 
+      if (!priceId) {
+        throw new Error('Price ID is required');
+      }
+
       const session = await stripe.checkout.sessions.create({
         line_items: [
           {
-            price: price_1PxwpuA9AcwovfpkLQxWKcJo,
+            price: priceId,
             quantity: 1,
           },
         ],
