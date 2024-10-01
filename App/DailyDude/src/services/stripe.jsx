@@ -44,8 +44,6 @@ export const createCheckoutSession = async (priceId, userId) => {
     }
 
     const { url } = await response.json();
-    
-    // Instead of redirecting here, return the URL
     return { url };
   } catch (error) {
     console.error('Error creating checkout session:', error);
@@ -55,7 +53,12 @@ export const createCheckoutSession = async (priceId, userId) => {
 
 export const getSubscriptionStatus = async (userId) => {
   try {
-    const response = await fetch(`${import.meta.env.API_URL}/api/subscription-status?userId=${userId}`, {
+    const apiUrl = getApiUrl();
+    if (!apiUrl) {
+      throw new Error('API URL is not set');
+    }
+
+    const response = await fetch(`${apiUrl}/api/subscription-status?userId=${userId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -76,7 +79,12 @@ export const getSubscriptionStatus = async (userId) => {
 
 export const cancelSubscription = async (userId) => {
   try {
-    const response = await fetch(`${import.meta.env.API_URL}/api/cancel-subscription`, {
+    const apiUrl = getApiUrl();
+    if (!apiUrl) {
+      throw new Error('API URL is not set');
+    }
+
+    const response = await fetch(`${apiUrl}/api/cancel-subscription`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -98,4 +106,3 @@ export const cancelSubscription = async (userId) => {
 };
 
 export { getStripe };
-
