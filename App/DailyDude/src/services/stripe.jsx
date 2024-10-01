@@ -1,21 +1,36 @@
 import { loadStripe } from '@stripe/stripe-js';
 
 let stripePromise;
+
 const getStripe = () => {
   if (!stripePromise) {
-    const key = import.meta.env.STRIPE_PUBLISHABLE_KEY;
+    const key = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
     if (!key) {
       console.error('Stripe publishable key is not set in environment variables');
-      return null;
+      return Promise.reject(new Error('Stripe publishable key is not set'));
     }
     stripePromise = loadStripe(key);
   }
   return stripePromise;
 };
 
+const getApiUrl = () => {
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (!apiUrl) {
+    console.error('API URL is not set in environment variables');
+    return '';
+  }
+  return apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+};
+
 export const createCheckoutSession = async (priceId, userId) => {
   try {
-    const response = await fetch(`${import.meta.env.API_URL}/api/create-checkout-session`, {
+    const apiUrl = getApiUrl();
+    if (!apiUrl) {
+      throw new Error('API URL is not set');
+    }
+
+    const response = await fetch(`${apiUrl}/api/create-checkout-session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -29,6 +44,8 @@ export const createCheckoutSession = async (priceId, userId) => {
     }
 
     const { url } = await response.json();
+    
+    // Instead of redirecting here, return the URL
     return { url };
   } catch (error) {
     console.error('Error creating checkout session:', error);
@@ -80,5 +97,5 @@ export const cancelSubscription = async (userId) => {
   }
 };
 
-export default getStripe;
+export { getStripe };
 
