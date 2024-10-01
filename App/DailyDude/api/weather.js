@@ -1,24 +1,27 @@
 import axios from 'axios';
 
 export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  const { city, lat, lon } = req.query;
 
-  const { location } = req.query;
-
-  if (!location) {
-    return res.status(400).json({ error: 'Location is required' });
+  if (!city && (!lat || !lon)) {
+    return res.status(400).json({ error: 'City name or coordinates are required' });
   }
 
   try {
-    const response = await axios.get(`https://api.openweathermap.org/data/2.5/weather`, {
-      params: {
-        q: location,
-        appid: process.env.OPENWEATHERMAP_API_KEY,
-        units: 'metric'
-      }
-    });
+    let url = 'https://api.openweathermap.org/data/2.5/weather';
+    let params = {
+      appid: process.env.OPENWEATHERMAP_API_KEY,
+      units: 'metric'
+    };
+
+    if (city) {
+      params.q = city;
+    } else {
+      params.lat = lat;
+      params.lon = lon;
+    }
+
+    const response = await axios.get(url, { params });
     res.json(response.data);
   } catch (error) {
     console.error('Weather API error:', error.response ? error.response.data : error.message);
