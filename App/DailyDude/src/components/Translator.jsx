@@ -45,7 +45,7 @@
       setIsLoading(true);
       setError('');
       try {
-        const response = await axios.post(`${API_BASE_URL}/translate`, {
+        const response = await axios.post(`${API_BASE_URL}/api/translate`, {
           text: text,
           from: from,
           to: to,
