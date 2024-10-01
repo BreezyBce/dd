@@ -6,7 +6,7 @@ import { useSubscription } from './SubscriptionContext';
 import { loadStripe } from '@stripe/stripe-js';
 import { checkUserExistence } from './firestoreUtils';
 
-const SERVER_URL = 'https://dd-mu-five.vercel.app/'; // Replace with your actual server URL
+const SERVER_URL = 'https://dd-mu-five.vercel.app'; // Replace with your actual server URL
 
 const stripePromise = loadStripe(import.meta.env.STRIPE_PUBLISHABLE_KEY);
 
