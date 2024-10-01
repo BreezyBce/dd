@@ -5,24 +5,23 @@ export default async function handler(req, res) {
     try {
       const { priceId, userId } = req.body;
 
-      // Create Checkout Sessions from body params.
       const session = await stripe.checkout.sessions.create({
         line_items: [
           {
-            // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
             price: price_1PxwpuA9AcwovfpkLQxWKcJo,
             quantity: 1,
           },
         ],
         mode: 'subscription',
-        success_url: `${req.headers.origin}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${req.headers.origin}/?canceled=true`,
+        success_url: `${process.env.DOMAIN}/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.DOMAIN}/canceled`,
         client_reference_id: userId,
       });
 
       res.status(200).json({ url: session.url });
-    } catch (err) {
-      res.status(err.statusCode || 500).json(err.message);
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      res.status(500).json({ error: error.message });
     }
   } else {
     res.setHeader('Allow', 'POST');
