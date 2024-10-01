@@ -1,44 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useApi } from '../api';
 import withSubscription from '../withSubscription';
-
 
 const WeatherForecast = () => {
   const [weather, setWeather] = useState(null);
   const [location, setLocation] = useState('');
-  const [suggestions, setSuggestions] = useState([]);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { makeApiCall } = useApi();
+
+  const API_BASE_URL = '/api';
 
   const fetchWeather = async (lat, lon) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await makeApiCall(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${import.meta.env.OPENWEATHERMAP_API_KEY}&units=metric`);
-      setWeather(data);
-    } catch (error) {
-      if (error.message === 'This feature requires a premium subscription') {
-        setError('This feature is only available to premium users. Please upgrade your account.');
-      } else {
-        setError('Failed to fetch weather data. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchWeatherByCity = async (city) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await axios.get(`https://api.openweathermap.org/data/2.5/weather`, {
-        params: {
-          q: city,
-          appid: import.meta.env.OPENWEATHERMAP_API_KEY,
-          units: 'metric'
-        }
+      const response = await axios.get(`${API_BASE_URL}/weather`, {
+        params: { lat, lon }
       });
       setWeather(response.data);
     } catch (error) {
@@ -49,19 +26,19 @@ const WeatherForecast = () => {
     }
   };
 
-  const fetchCitySuggestions = async (input) => {
-    if (input.length < 3) return;
+  const fetchWeatherByCity = async (city) => {
+    setIsLoading(true);
+    setError(null);
     try {
-      const response = await axios.get('https://wft-geo-db.p.rapidapi.com/v1/geo/cities', {
-        params: { namePrefix: input, limit: '5' },
-        headers: {
-          'X-RapidAPI-Key': import.meta.env.RAPIDAPI_KEY,
-          'X-RapidAPI-Host': 'wft-geo-db.p.rapidapi.com'
-        }
+      const response = await axios.get(`${API_BASE_URL}/weather`, {
+        params: { city }
       });
-      setSuggestions(response.data.data);
+      setWeather(response.data);
     } catch (error) {
-      console.error('Error fetching city suggestions:', error);
+      console.error('Error fetching weather data:', error);
+      setError('Failed to fetch weather data. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -81,50 +58,29 @@ const WeatherForecast = () => {
     }
   }, []);
 
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (location) fetchCitySuggestions(location);
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [location]);
-
-  const handleLocationChange = (e) => {
-    setLocation(e.target.value);
-    setSuggestions([]);
-  };
-
-  const handleSuggestionClick = (city) => {
-    setLocation(city.name);
-    setSuggestions([]);
-    fetchWeatherByCity(city.name);
+  const handleLocationSubmit = (e) => {
+    e.preventDefault();
+    if (location.trim()) {
+      fetchWeatherByCity(location.trim());
+    }
   };
 
   return (
     <div className="bg-white p-6 rounded-lg max-w-md mx-auto text-gray-800 dark:text-gray-400 dark:bg-dark-background-2">
       <h2 className="text-2xl font-bold mb-4 text-center">Weather Forecast</h2>
-      <div className="mb-4 relative">
+      <form onSubmit={handleLocationSubmit} className="mb-4">
         <input
           type="text"
           value={location}
-          onChange={handleLocationChange}
+          onChange={(e) => setLocation(e.target.value)}
           placeholder="Enter city name"
           className="w-full p-2 border rounded"
         />
-        {suggestions.length > 0 && (
-          <ul className="absolute z-10 bg-white border rounded mt-1 w-full">
-            {suggestions.map((city) => (
-              <li
-                key={city.id}
-                onClick={() => handleSuggestionClick(city)}
-                className="p-2 hover:bg-gray-100 cursor-pointer"
-              >
-                {city.name}, {city.countryCode}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+        <button type="submit" className="mt-2 w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
+          Get Weather
+        </button>
+      </form>
+      {isLoading && <p className="text-center">Loading...</p>}
       {error && <p className="text-red-500 text-center">{error}</p>}
       {weather && !error && (
         <div className="text-center">
@@ -142,5 +98,3 @@ const WeatherForecast = () => {
 };
 
 export default withSubscription(WeatherForecast, 'premium');
-
-
