@@ -5,10 +5,13 @@ export default async function handler(req, res) {
     try {
       const { priceId, userId } = req.body;
 
+      console.log('Received request:', { priceId, userId });
+
       if (!priceId) {
         throw new Error('Price ID is required');
       }
 
+      console.log('Creating checkout session with Stripe');
       const session = await stripe.checkout.sessions.create({
         line_items: [
           {
@@ -22,9 +25,10 @@ export default async function handler(req, res) {
         client_reference_id: userId,
       });
 
+      console.log('Checkout session created:', session.id);
       res.status(200).json({ url: session.url });
     } catch (error) {
-      console.error('Error creating checkout session:', error);
+      console.error('Error in create-checkout-session:', error);
       res.status(500).json({ error: error.message });
     }
   } else {
