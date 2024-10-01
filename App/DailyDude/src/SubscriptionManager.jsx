@@ -45,17 +45,39 @@ const SubscriptionManager = () => {
   setError(null);
 
   try {
-    console.log('Checking user existence');
+    console.log('Starting upgrade process');
+    console.log('Current user:', currentUser.uid);
+
     const userExists = await checkUserExistence(currentUser.uid);
+    console.log('User exists:', userExists);
+
     if (!userExists) {
       throw new Error('User data not found in database');
     }
 
     console.log('Creating checkout session');
-    const { url } = await createCheckoutSession('price_1PxwpuA9AcwovfpkLQxWKcJo', currentUser.uid);
-    if (url) {
-      console.log('Redirecting to:', url);
-      window.location.href = url;
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/create-checkout-session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        priceId: 'price_1PxwpuA9AcwovfpkLQxWKcJo',
+        userId: currentUser.uid,
+      }),
+    });
+
+    console.log('Response status:', response.status);
+    const data = await response.json();
+    console.log('Response data:', data);
+
+    if (!response.ok) {
+      throw new Error(data.error || `HTTP error! status: ${response.status}`);
+    }
+
+    if (data.url) {
+      console.log('Redirecting to:', data.url);
+      window.location.href = data.url;
     } else {
       throw new Error('No checkout URL received');
     }
