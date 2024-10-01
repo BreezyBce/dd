@@ -178,4 +178,4 @@ const SubscriptionManager = () => {
   );
 };
 
-export default SubscriptionManager;
+export default SubscriptionManager; 
