@@ -68,12 +68,15 @@ const SubscriptionManager = () => {
     });
 
     console.log('Response status:', response.status);
+    
+    if (!response.ok) {
+      const textResponse = await response.text();
+      console.error('Error response:', textResponse);
+      throw new Error(`HTTP error! status: ${response.status}, message: ${textResponse}`);
+    }
+
     const data = await response.json();
     console.log('Response data:', data);
-
-    if (!response.ok) {
-      throw new Error(data.error || `HTTP error! status: ${response.status}`);
-    }
 
     if (data.url) {
       console.log('Redirecting to:', data.url);
