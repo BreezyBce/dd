@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { auth, db } from './firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 const SubscriptionContext = createContext();
 
@@ -19,6 +19,14 @@ export const SubscriptionProvider = ({ children }) => {
     }
   };
 
+  const updateSubscriptionStatus = async (newStatus) => {
+    const user = auth.currentUser;
+    if (user) {
+      await updateDoc(doc(db, 'users', user.uid), { subscriptionStatus: newStatus });
+      setSubscriptionStatus(newStatus);
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
@@ -32,7 +40,7 @@ export const SubscriptionProvider = ({ children }) => {
   }, []);
 
   return (
-    <SubscriptionContext.Provider value={{ subscriptionStatus, checkSubscriptionStatus }}>
+    <SubscriptionContext.Provider value={{ subscriptionStatus, checkSubscriptionStatus, updateSubscriptionStatus }}>
       {children}
     </SubscriptionContext.Provider>
   );
