@@ -140,8 +140,8 @@ app.get('/api/exchange-rate', async (req, res) => {
     console.log('Exchange rate API response:', response.data);
     res.json({ conversionRate: response.data.conversion_rate });
   } catch (error) {
-    console.error('Error in exchange-rate:', error);
-    res.status(500).json({ error: 'Internal Server Error', details: error.message });
+    console.error('Error in exchange-rate:', error.response ? error.response.data : error.message);
+    res.status(error.response?.status || 500).json({ error: 'Failed to fetch exchange rate', details: error.message });
   }
 });
 
