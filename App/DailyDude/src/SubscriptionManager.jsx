@@ -101,7 +101,16 @@ const SubscriptionManager = () => {
     setLoading(true);
     setError(null);
     try {
-      await cancelSubscription(currentUser.uid);
+      const response = await cancelSubscription(currentUser.uid);
+      
+      if (response.error === "No active subscription found for this user") {
+        console.log('No active subscription found. Updating to free plan.');
+      } else if (response.error) {
+        throw new Error(response.error);
+      }
+
+      // Update user's subscription status to free
+      await updateSubscriptionStatus(currentUser.uid, 'free');
       await updateSubscriptionStatus('free');
       setError(null);
     } catch (error) {
