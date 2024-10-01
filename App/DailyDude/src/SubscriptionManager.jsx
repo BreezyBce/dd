@@ -5,6 +5,8 @@ import { db, auth } from './firebase';
 import { useSubscription } from './SubscriptionContext';
 import { createCheckoutSession, cancelSubscription } from './services/stripe';
 import { checkUserExistence } from './firestoreUtils';
+import { updateSubscriptionStatus } from './subscriptionService';
+
 
 const SubscriptionManager = () => {
   const [loading, setLoading] = useState(false);
