@@ -30,6 +30,8 @@ export const createCheckoutSession = async (priceId, userId) => {
       throw new Error('API URL is not set');
     }
 
+    console.log('Creating checkout session with:', { priceId, userId, apiUrl });
+
     const response = await fetch(`${apiUrl}/api/create-checkout-session`, {
       method: 'POST',
       headers: {
@@ -40,11 +42,16 @@ export const createCheckoutSession = async (priceId, userId) => {
 
     if (!response.ok) {
       const errorData = await response.text();
+      console.error('Server response:', errorData);
       throw new Error(errorData || `HTTP error! status: ${response.status}`);
     }
 
-    const { url } = await response.json();
-    return { url };
+    const data = await response.json();
+    if (!data.url) {
+      throw new Error('No checkout URL received from server');
+    }
+
+    return { url: data.url };
   } catch (error) {
     console.error('Error creating checkout session:', error);
     throw error;
