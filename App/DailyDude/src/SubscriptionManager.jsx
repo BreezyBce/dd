@@ -1,193 +1,181 @@
-      import React, { useState, useEffect } from 'react';
-      import { useNavigate } from 'react-router-dom';
-      import { doc, getDoc, updateDoc } from 'firebase/firestore';
-      import { db, auth } from './firebase';
-      import { useSubscription } from './SubscriptionContext';
-      import { loadStripe } from '@stripe/stripe-js';
-      import { checkUserExistence } from './firestoreUtils';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db, auth } from './firebase';
+import { useSubscription } from './SubscriptionContext';
+import { loadStripe } from '@stripe/stripe-js';
+import { checkUserExistence } from './firestoreUtils';
 
-      const SERVER_URL = 'https://b14a9b51-8137-40f8-8fe5-a32a1483c5db-00-1jg9ll4a2ha83.picard.replit.dev';
+const SERVER_URL = 'https://dd-mu-five.vercel.app/'; // Replace with your actual server URL
 
-      const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+const stripePromise = loadStripe(import.meta.env.STRIPE_PUBLISHABLE_KEY);
 
-      const SubscriptionManager = () => {
-        const [loading, setLoading] = useState(false);
-        const [stripe, setStripe] = useState(null);
-        const [error, setError] = useState(null);
-        const { subscriptionStatus, updateSubscriptionStatus } = useSubscription();
-        const navigate = useNavigate();
-        const [currentUser, setCurrentUser] = useState(null);
+const SubscriptionManager = () => {
+  const [loading, setLoading] = useState(false);
+  const [stripe, setStripe] = useState(null);
+  const [error, setError] = useState(null);
+  const { subscriptionStatus, updateSubscriptionStatus } = useSubscription();
+  const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(null);
 
-        useEffect(() => {
-          stripePromise.then(stripeInstance => {
-            setStripe(stripeInstance);
-          });
+  useEffect(() => {
+    stripePromise.then(stripeInstance => {
+      setStripe(stripeInstance);
+    });
 
-          const unsubscribe = auth.onAuthStateChanged(user => {
-            setCurrentUser(user);
-            if (user) {
-              checkUserSubscription(user.uid);
-            }
-          });
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      setCurrentUser(user);
+      if (user) {
+        checkUserSubscription(user.uid);
+      }
+    });
 
-          return () => unsubscribe();
-        }, []);
+    return () => unsubscribe();
+  }, []);
 
-        const checkUserSubscription = async (userId) => {
-          try {
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            if (userDoc.exists()) {
-              updateSubscriptionStatus(userDoc.data().subscriptionStatus || 'free');
-            }
-          } catch (error) {
-            console.error('Error checking user subscription:', error);
-          }
-        };
+  const checkUserSubscription = async (userId) => {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (userDoc.exists()) {
+        updateSubscriptionStatus(userDoc.data().subscriptionStatus || 'free');
+      }
+    } catch (error) {
+      console.error('Error checking user subscription:', error);
+    }
+  };
 
-        const handleUpgrade = async () => {
-          if (!currentUser) {
-            setError('No user logged in. Please log in to upgrade.');
-            return;
-          }
+  const handleUpgrade = async () => {
+    if (!currentUser) {
+      setError('No user logged in. Please log in to upgrade.');
+      return;
+    }
 
-          setLoading(true);
-          setError(null);
+    setLoading(true);
+    setError(null);
 
-          try {
-            const userExists = await checkUserExistence(currentUser.uid);
-            if (!userExists) {
-              throw new Error('User data not found in database');
-            }
+    try {
+      const userExists = await checkUserExistence(currentUser.uid);
+      if (!userExists) {
+        throw new Error('User data not found in database');
+      }
 
-            console.log('Sending request to:', `${SERVER_URL}/api/create-checkout-session`);
-            console.log('User ID:', currentUser.uid);
+      const response = await fetch(`${SERVER_URL}/api/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId: 'price_1PxwpuA9AcwovfpkLQxWKcJo', // Replace with your actual Stripe price ID
+          userId: currentUser.uid,
+        }),
+      });
 
-            const response = await fetch(`${SERVER_URL}/api/create-checkout-session`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                priceId: 'price_1PxwpuA9AcwovfpkLQxWKcJo',
-                userId: currentUser.uid,
-              }),
-            });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-            console.log('Response status:', response.status);
-            const data = await response.json();
-            console.log('Response data:', data);
+      const { url } = await response.json();
+      window.location.href = url;
+    } catch (err) {
+      console.error('Error:', err);
+      setError(err.message || 'Failed to create checkout session. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            if (!response.ok) {
-              throw new Error(data.error || `HTTP error! status: ${response.status}`);
-            }
+  const handleDowngrade = async () => {
+    if (!currentUser) {
+      setError('No user logged in. Please log in to downgrade.');
+      return;
+    }
 
-            if (data.url) {
-              window.location.href = data.url;
-            } else {
-              throw new Error('No checkout URL received from server');
-            }
-          } catch (err) {
-            console.error('Error:', err);
-            setError(err.message || 'Failed to create checkout session. Please try again.');
-          } finally {
-            setLoading(false);
-          }
-        };
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${SERVER_URL}/api/cancel-subscription`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: currentUser.uid,
+        }),
+      });
 
-        const handleDowngrade = async () => {
-          if (!currentUser) {
-            setError('No user logged in. Please log in to downgrade.');
-            return;
-          }
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-          setLoading(true);
-          setError(null);
-          try {
-            const response = await fetch(`${SERVER_URL}/api/cancel-subscription`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                userId: currentUser.uid,
-              }),
-            });
+      await updateSubscriptionStatus('free');
+      setError(null);
+    } catch (error) {
+      console.error('Error:', error);
+      setError(error.message || 'Failed to downgrade subscription. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            if (!response.ok) {
-              const errorData = await response.text(); // Use text() instead of json() as the response might not be JSON
-              throw new Error(errorData || `HTTP error! status: ${response.status}`);
-            }
+  return (
+    <div className="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-xl dark:bg-gray-800">
+      <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">Subscription Management</h1>
 
-            const data = await response.json();
-            updateSubscriptionStatus('free');
-            setError(null);
-          } catch (error) {
-            console.error('Error:', error);
-            setError(error.message || 'Failed to downgrade subscription. Please try again.');
-          } finally {
-            setLoading(false);
-          }
-        };
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-2 text-gray-700 dark:text-gray-300">Current Plan</h2>
+        <p className="text-lg text-gray-600 dark:text-gray-400">
+          You are currently on the <span className="font-bold text-blue-600 dark:text-blue-400">{subscriptionStatus === 'premium' ? 'Premium' : 'Free'}</span> plan.
+        </p>
+      </div>
 
-        return (
-          <div className="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-xl dark:bg-gray-800">
-            <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">Subscription Management</h1>
-
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-2 text-gray-700 dark:text-gray-300">Current Plan</h2>
-              <p className="text-lg text-gray-600 dark:text-gray-400">
-                You are currently on the <span className="font-bold text-blue-600 dark:text-blue-400">{subscriptionStatus === 'premium' ? 'Premium' : 'Free'}</span> plan.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="border p-4 rounded-lg">
-                <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">Free Plan</h3>
-                <ul className="list-disc list-inside mb-4 text-gray-600 dark:text-gray-400">
-                  <li>Basic features</li>
-                  <li>Limited usage</li>
-                  <li>Standard support</li>
-                </ul>
-                {subscriptionStatus === 'premium' && (
-                  <button
-                    onClick={handleDowngrade}
-                    disabled={loading}
-                    className="w-full bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400 transition duration-300"
-                  >
-                    {loading ? 'Processing...' : 'Downgrade to Free'}
-                  </button>
-                )}
-              </div>
-
-              <div className="border p-4 rounded-lg">
-                <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">Premium Plan</h3>
-                <ul className="list-disc list-inside mb-4 text-gray-600 dark:text-gray-400">
-                  <li>All features unlocked</li>
-                  <li>Unlimited usage</li>
-                  <li>Priority support</li>
-                </ul>
-                {subscriptionStatus === 'free' && (
-                  <button
-                    onClick={handleUpgrade}
-                    disabled={loading || !stripe}
-                    className="w-full bg-customorange-500 text-white px-4 py-2 rounded hover:bg-customorange-400 transition duration-300"
-                  >
-                    {loading ? 'Processing...' : 'Upgrade to Premium'}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {error && <p className="text-red-500 mt-4">{error}</p>}
-
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="border p-4 rounded-lg">
+          <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">Free Plan</h3>
+          <ul className="list-disc list-inside mb-4 text-gray-600 dark:text-gray-400">
+            <li>Basic features</li>
+            <li>Limited usage</li>
+            <li>Standard support</li>
+          </ul>
+          {subscriptionStatus === 'premium' && (
             <button
-              onClick={() => navigate('/dashboard')}
-              className="mt-8 bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 transition duration-300"
+              onClick={handleDowngrade}
+              disabled={loading}
+              className="w-full bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400 transition duration-300"
             >
-              Back to Dashboard
+              {loading ? 'Processing...' : 'Downgrade to Free'}
             </button>
-          </div>
-        );
-      };
+          )}
+        </div>
 
-      export default SubscriptionManager;
+        <div className="border p-4 rounded-lg">
+          <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">Premium Plan</h3>
+          <ul className="list-disc list-inside mb-4 text-gray-600 dark:text-gray-400">
+            <li>All features unlocked</li>
+            <li>Unlimited usage</li>
+            <li>Priority support</li>
+          </ul>
+          {subscriptionStatus === 'free' && (
+            <button
+              onClick={handleUpgrade}
+              disabled={loading || !stripe}
+              className="w-full bg-customorange-500 text-white px-4 py-2 rounded hover:bg-customorange-400 transition duration-300"
+            >
+              {loading ? 'Processing...' : 'Upgrade to Premium'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {error && <p className="text-red-500 mt-4">{error}</p>}
+
+      <button
+        onClick={() => navigate('/dashboard')}
+        className="mt-8 bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 transition duration-300"
+      >
+        Back to Dashboard
+      </button>
+    </div>
+  );
+};
+
+export default SubscriptionManager;
