@@ -3,12 +3,21 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
+      console.log('Received request body:', req.body);
       const { priceId, userId } = req.body;
 
-      console.log('Received request:', { priceId, userId });
+      console.log('Parsed request:', { priceId, userId });
 
       if (!priceId) {
         throw new Error('Price ID is required');
+      }
+
+      if (!process.env.STRIPE_SECRET_KEY) {
+        throw new Error('Stripe secret key is not set');
+      }
+
+      if (!process.env.DOMAIN) {
+        throw new Error('DOMAIN environment variable is not set');
       }
 
       console.log('Creating checkout session with Stripe');
@@ -29,7 +38,7 @@ export default async function handler(req, res) {
       res.status(200).json({ url: session.url });
     } catch (error) {
       console.error('Error in create-checkout-session:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error.message, stack: error.stack });
     }
   } else {
     res.setHeader('Allow', 'POST');
