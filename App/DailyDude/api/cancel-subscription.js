@@ -1,34 +1,56 @@
 import Stripe from 'stripe';
+import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const db = getFirestore();
 
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
       const { userId } = req.body;
 
-      // Fetch the subscription ID associated with the user
-      // This is a placeholder - you'll need to implement this based on your database structure
-      const subscriptionId = await getSubscriptionIdForUser(userId);
-
-      if (!subscriptionId) {
-        return res.status(404).json({ error: 'No active subscription found for this user' });
+      // Get the user's document from Firestore
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      
+      if (!userDoc.exists()) {
+        throw new Error('User not found');
       }
 
-      const canceledSubscription = await stripe.subscriptions.del(subscriptionId);
+      const userData = userDoc.data();
+      const stripeCustomerId = userData.stripeCustomerId;
 
-      res.status(200).json({ message: 'Subscription successfully canceled', subscription: canceledSubscription });
+      if (!stripeCustomerId) {
+        // If there's no Stripe customer ID, just update the user's plan to free
+        await updateDoc(doc(db, 'users', userId), { subscriptionStatus: 'free' });
+        return res.status(200).json({ message: 'User downgraded to free plan' });
+      }
+
+      // Get the customer's subscriptions
+      const subscriptions = await stripe.subscriptions.list({
+        customer: stripeCustomerId,
+        status: 'active',
+      });
+
+      if (subscriptions.data.length === 0) {
+        // If there are no active subscriptions, just update the user's plan to free
+        await updateDoc(doc(db, 'users', userId), { subscriptionStatus: 'free' });
+        return res.status(200).json({ message: 'User downgraded to free plan' });
+      }
+
+      // Cancel the subscription
+      const subscription = subscriptions.data[0];
+      await stripe.subscriptions.del(subscription.id);
+
+      // Update the user's subscription status in Firestore
+      await updateDoc(doc(db, 'users', userId), { subscriptionStatus: 'free' });
+
+      res.status(200).json({ message: 'Subscription cancelled successfully' });
     } catch (error) {
+      console.error('Error cancelling subscription:', error);
       res.status(500).json({ error: error.message });
     }
   } else {
     res.setHeader('Allow', 'POST');
-    res.status(405).end('Method Not Allowed');
+    res.status(405).json({ error: 'Method Not Allowed' });
   }
-}
-
-// Placeholder function - implement this based on your database structure
-async function getSubscriptionIdForUser(userId) {
-  // Query your database to get the subscription ID for the user
-  // Return the subscription ID or null if not found
 }
