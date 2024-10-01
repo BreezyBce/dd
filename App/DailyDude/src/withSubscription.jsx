@@ -32,4 +32,4 @@ const withSubscription = (WrappedComponent, requiredPlan = 'free') => {
   }
 };
 
-export default withSubscription;
+export default withSubscription; 
