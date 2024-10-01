@@ -32,9 +32,8 @@ const fetchExchangeRate = async () => {
   setIsLoading(true);
   setError(null);
   try {
-    const response = await axios.get(`${API_BASE_URL}/exchange-rate`, {
-      params: { from: fromCurrency, to: toCurrency },
-      withCredentials: true
+    const response = await axios.get(`/api/exchange-rate`, {
+      params: { from: fromCurrency, to: toCurrency }
     });
     if (response.data && response.data.conversionRate) {
       setExchangeRate(response.data.conversionRate);
