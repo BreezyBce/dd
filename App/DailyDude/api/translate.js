@@ -13,6 +13,9 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('Attempting translation with:', { text, from, to });
+    console.log('Using API key:', process.env.GOOGLE_TRANSLATE_API_KEY ? 'Present' : 'Missing');
+
     const response = await axios.post(
       `https://translation.googleapis.com/language/translate/v2?key=${process.env.GOOGLE_TRANSLATE_API_KEY}`,
       {
@@ -22,10 +25,18 @@ export default async function handler(req, res) {
         format: 'text'
       }
     );
-    console.log('Translation successful');
-    res.json({ translatedText: response.data.data.translations[0].translatedText });
+    
+    console.log('Google API Response:', response.data);
+
+    if (response.data && response.data.data && response.data.data.translations && response.data.data.translations[0]) {
+      console.log('Translation successful');
+      res.json({ translatedText: response.data.data.translations[0].translatedText });
+    } else {
+      console.error('Unexpected response structure:', response.data);
+      res.status(500).json({ error: 'Unexpected response from translation service' });
+    }
   } catch (error) {
     console.error('Translation error:', error.response ? error.response.data : error.message);
-    res.status(500).json({ error: 'An error occurred during translation' });
+    res.status(500).json({ error: 'An error occurred during translation', details: error.message });
   }
 }
