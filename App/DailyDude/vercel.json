@@ -5,7 +5,8 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": { 
-        "distDir": "dist"
+        "distDir": "dist",
+        "buildCommand": "npm run build"
       }
     },
     {
@@ -16,15 +17,10 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "dest": "/api/$1.js"
     },
     {
-      "src": "/(assets|images|fonts|icons)/.*",
-      "headers": { "cache-control": "max-age=31536000, immutable" }
-    },
-    {
-      "src": "/(.*\\.[jt]s)",
-      "headers": { "cache-control": "public, max-age=0, must-revalidate" }
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
