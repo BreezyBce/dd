@@ -46,4 +46,4 @@ export const SubscriptionProvider = ({ children }) => {
   );
 };
 
-export const useSubscription = () => useContext(SubscriptionContext);
+export const useSubscription = () => useContext(SubscriptionContext); 
