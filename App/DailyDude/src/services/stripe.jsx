@@ -38,7 +38,7 @@ export const createCheckoutSession = async (priceId, userId) => {
 
 export const getSubscriptionStatus = async (userId) => {
   try {
-    const response = await fetch(`${import.meta.env.API_URL}/api/subscription-status/${userId}`, {
+    const response = await fetch(`${import.meta.env.API_URL}/api/subscription-status?userId=${userId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
