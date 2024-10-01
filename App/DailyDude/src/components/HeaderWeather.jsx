@@ -6,18 +6,13 @@ const HeaderWeather = () => {
   const [weather, setWeather] = useState(null);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+ useEffect(() => {
     const fetchWeather = async () => {
       try {
         const position = await getCurrentPosition();
         const { latitude, longitude } = position.coords;
-        const response = await axios.get(`https://api.openweathermap.org/data/2.5/weather`, {
-          params: {
-            lat: latitude,
-            lon: longitude,
-            appid: import.meta.env.VITE_OPENWEATHERMAP_API_KEY,
-            units: 'metric'
-          }
+        const response = await axios.get('/api/weather', {
+          params: { lat: latitude, lon: longitude }
         });
         setWeather(response.data);
       } catch (error) {
