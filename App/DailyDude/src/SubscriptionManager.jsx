@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { useSubscription } from './SubscriptionContext';
 import { loadStripe } from '@stripe/stripe-js';
 import { checkUserExistence } from './firestoreUtils';
 
-const SERVER_URL = 'https://dd-mu-five.vercel.app'; // Replace with your actual server URL
+const SERVER_URL = 'https://dd-mu-five.vercel.app'; // Your server URL
 
 const stripePromise = loadStripe(import.meta.env.STRIPE_PUBLISHABLE_KEY);
 
@@ -65,17 +65,22 @@ const SubscriptionManager = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          priceId: 'price_1PxwpuA9AcwovfpkLQxWKcJo', // Replace with your actual Stripe price ID
+          priceId: 'price_1PxwpuA9AcwovfpkLQxWKcJo', // Your Stripe price ID
           userId: currentUser.uid,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.text();
+        throw new Error(errorData || `HTTP error! status: ${response.status}`);
       }
 
       const { url } = await response.json();
-      window.location.href = url;
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
     } catch (err) {
       console.error('Error:', err);
       setError(err.message || 'Failed to create checkout session. Please try again.');
@@ -104,7 +109,8 @@ const SubscriptionManager = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.text();
+        throw new Error(errorData || `HTTP error! status: ${response.status}`);
       }
 
       await updateSubscriptionStatus('free');
