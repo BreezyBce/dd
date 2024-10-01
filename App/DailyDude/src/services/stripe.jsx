@@ -3,7 +3,12 @@ import { loadStripe } from '@stripe/stripe-js';
 let stripePromise;
 const getStripe = () => {
   if (!stripePromise) {
-    stripePromise = loadStripe(import.meta.env.STRIPE_PUBLISHABLE_KEY);
+    const key = import.meta.env.STRIPE_PUBLISHABLE_KEY;
+    if (!key) {
+      console.error('Stripe publishable key is not set in environment variables');
+      return null;
+    }
+    stripePromise = loadStripe(key);
   }
   return stripePromise;
 };
