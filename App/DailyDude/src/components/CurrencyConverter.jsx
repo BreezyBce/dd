@@ -34,7 +34,7 @@ const fetchExchangeRate = async () => {
   try {
     const response = await axios.get(`${API_BASE_URL}/exchange-rate`, {
       params: { from: fromCurrency, to: toCurrency },
-      withCredentials: true  // Add this line
+      withCredentials: true
     });
     if (response.data && response.data.conversionRate) {
       setExchangeRate(response.data.conversionRate);
@@ -42,7 +42,7 @@ const fetchExchangeRate = async () => {
       throw new Error('Invalid response from server');
     }
   } catch (error) {
-    console.error('Error fetching exchange rate:', error);
+    console.error('Error fetching exchange rate:', error.response ? error.response.data : error.message);
     setError('Failed to fetch exchange rate. Please try again later.');
   }
   setIsLoading(false);
