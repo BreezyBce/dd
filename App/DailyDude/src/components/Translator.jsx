@@ -45,12 +45,18 @@
   setIsLoading(true);
   setError('');
   try {
+    console.log('Sending translation request:', { text, from, to });
     const response = await axios.post(`${API_BASE_URL}/translate`, {
       text: text,
       from: from,
       to: to,
     });
-    setOutputText(response.data.translatedText);
+    console.log('Translation response:', response.data);
+    if (response.data && response.data.translatedText) {
+      setOutputText(response.data.translatedText);
+    } else {
+      throw new Error('Unexpected response structure');
+    }
   } catch (error) {
     console.error('Translation error:', error);
     setError(error.response?.data?.error || error.message || 'An unknown error occurred');
