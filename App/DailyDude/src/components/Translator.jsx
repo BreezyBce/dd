@@ -36,28 +36,28 @@
       { code: 'th', name: 'Thai' },
     ];
 
-    const translateText = async (text, from, to) => {
-      if (!text.trim()) {
-        setOutputText('');
-        return;
-      }
+   const translateText = async (text, from, to) => {
+  if (!text.trim()) {
+    setOutputText('');
+    return;
+  }
 
-      setIsLoading(true);
-      setError('');
-      try {
-        const response = await axios.post(`${API_BASE_URL}/api/translate`, {
-          text: text,
-          from: from,
-          to: to,
-        });
-        setOutputText(response.data.translatedText);
-      } catch (error) {
-        console.error('Translation error:', error);
-        setError(error.response?.data?.error || error.message || 'An unknown error occurred');
-        setOutputText('');
-      }
-      setIsLoading(false);
-    };
+  setIsLoading(true);
+  setError('');
+  try {
+    const response = await axios.post(`${API_BASE_URL}/translate`, {
+      text: text,
+      from: from,
+      to: to,
+    });
+    setOutputText(response.data.translatedText);
+  } catch (error) {
+    console.error('Translation error:', error);
+    setError(error.response?.data?.error || error.message || 'An unknown error occurred');
+    setOutputText('');
+  }
+  setIsLoading(false);
+};
 
     const debouncedTranslate = useCallback(
       debounce(translateText, 300),
