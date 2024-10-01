@@ -36,33 +36,36 @@ const SubscriptionManager = () => {
   };
 
   const handleUpgrade = async () => {
-    if (!currentUser) {
-      setError('No user logged in. Please log in to upgrade.');
-      return;
+  if (!currentUser) {
+    setError('No user logged in. Please log in to upgrade.');
+    return;
+  }
+
+  setLoading(true);
+  setError(null);
+
+  try {
+    console.log('Checking user existence');
+    const userExists = await checkUserExistence(currentUser.uid);
+    if (!userExists) {
+      throw new Error('User data not found in database');
     }
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const userExists = await checkUserExistence(currentUser.uid);
-      if (!userExists) {
-        throw new Error('User data not found in database');
-      }
-
-      const { url } = await createCheckoutSession('price_1PxwpuA9AcwovfpkLQxWKcJo', currentUser.uid);
-      if (url) {
-        window.location.href = url;
-      } else {
-        throw new Error('No checkout URL received');
-      }
-    } catch (err) {
-      console.error('Error:', err);
-      setError(err.message || 'Failed to create checkout session. Please try again.');
-    } finally {
-      setLoading(false);
+    console.log('Creating checkout session');
+    const { url } = await createCheckoutSession('price_1PxwpuA9AcwovfpkLQxWKcJo', currentUser.uid);
+    if (url) {
+      console.log('Redirecting to:', url);
+      window.location.href = url;
+    } else {
+      throw new Error('No checkout URL received');
     }
-  };
+  } catch (err) {
+    console.error('Error in handleUpgrade:', err);
+    setError(err.message || 'Failed to create checkout session. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleDowngrade = async () => {
     if (!currentUser) {
