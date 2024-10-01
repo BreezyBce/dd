@@ -3,26 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { useSubscription } from './SubscriptionContext';
-import { loadStripe } from '@stripe/stripe-js';
+import { createCheckoutSession, cancelSubscription } from './services/stripe';
 import { checkUserExistence } from './firestoreUtils';
-
-const SERVER_URL = 'https://dd-mu-five.vercel.app'; // Your server URL
-
-const stripePromise = loadStripe(import.meta.env.STRIPE_PUBLISHABLE_KEY);
 
 const SubscriptionManager = () => {
   const [loading, setLoading] = useState(false);
-  const [stripe, setStripe] = useState(null);
   const [error, setError] = useState(null);
   const { subscriptionStatus, updateSubscriptionStatus } = useSubscription();
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    stripePromise.then(stripeInstance => {
-      setStripe(stripeInstance);
-    });
-
     const unsubscribe = auth.onAuthStateChanged(user => {
       setCurrentUser(user);
       if (user) {
@@ -59,23 +50,7 @@ const SubscriptionManager = () => {
         throw new Error('User data not found in database');
       }
 
-      const response = await fetch(`${SERVER_URL}/api/create-checkout-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          priceId: 'price_1PxwpuA9AcwovfpkLQxWKcJo', // Your Stripe price ID
-          userId: currentUser.uid,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || `HTTP error! status: ${response.status}`);
-      }
-
-      const { url } = await response.json();
+      const { url } = await createCheckoutSession('price_1PxwpuA9AcwovfpkLQxWKcJo', currentUser.uid);
       if (url) {
         window.location.href = url;
       } else {
@@ -98,21 +73,7 @@ const SubscriptionManager = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${SERVER_URL}/api/cancel-subscription`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: currentUser.uid,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || `HTTP error! status: ${response.status}`);
-      }
-
+      await cancelSubscription(currentUser.uid);
       await updateSubscriptionStatus('free');
       setError(null);
     } catch (error) {
@@ -163,7 +124,7 @@ const SubscriptionManager = () => {
           {subscriptionStatus === 'free' && (
             <button
               onClick={handleUpgrade}
-              disabled={loading || !stripe}
+              disabled={loading}
               className="w-full bg-customorange-500 text-white px-4 py-2 rounded hover:bg-customorange-400 transition duration-300"
             >
               {loading ? 'Processing...' : 'Upgrade to Premium'}
