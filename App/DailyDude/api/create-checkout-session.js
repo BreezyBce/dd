@@ -1,9 +1,12 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export default async function handler(req, res) {
+  console.log('Function invoked');
   if (req.method === 'POST') {
     try {
-      console.log('Received request body:', req.body);
+      console.log('Received request body:', JSON.stringify(req.body));
       const { priceId, userId } = req.body;
 
       console.log('Parsed request:', { priceId, userId });
@@ -21,6 +24,9 @@ export default async function handler(req, res) {
       }
 
       console.log('Creating checkout session with Stripe');
+      console.log('Stripe Secret Key:', process.env.STRIPE_SECRET_KEY.substring(0, 8) + '...');
+      console.log('Domain:', process.env.DOMAIN);
+
       const session = await stripe.checkout.sessions.create({
         line_items: [
           {
@@ -41,7 +47,7 @@ export default async function handler(req, res) {
       res.status(500).json({ 
         error: 'An error occurred while creating the checkout session',
         details: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        stack: error.stack
       });
     }
   } else {
