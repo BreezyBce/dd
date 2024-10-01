@@ -76,7 +76,7 @@ const WeatherForecast = () => {
           placeholder="Enter city name"
           className="w-full p-2 border rounded"
         />
-        <button type="submit" className="mt-2 w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
+        <button type="submit" className="mt-2 w-full bg-customorange-500 text-white p-2 rounded hover:bg-customorange-400">
           Get Weather
         </button>
       </form>
