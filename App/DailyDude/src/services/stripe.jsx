@@ -3,14 +3,14 @@ import { loadStripe } from '@stripe/stripe-js';
 let stripePromise;
 const getStripe = () => {
   if (!stripePromise) {
-    stripePromise = loadStripe(import.meta.env.STRIPE_PUBLISHABLE_KEY);
+    stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
   }
   return stripePromise;
 };
 
 export const createCheckoutSession = async (priceId, userId) => {
   try {
-    const response = await fetch(`${import.meta.env.API_URL}/api/create-checkout-session`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/create-checkout-session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -33,7 +33,7 @@ export const createCheckoutSession = async (priceId, userId) => {
 
 export const getSubscriptionStatus = async (userId) => {
   try {
-    const response = await fetch(`${import.meta.env.API_URL}/api/subscription-status/${userId}`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/subscription-status/${userId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -54,7 +54,7 @@ export const getSubscriptionStatus = async (userId) => {
 
 export const cancelSubscription = async (userId) => {
   try {
-    const response = await fetch(`${import.meta.env.API_URL}/api/cancel-subscription`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/cancel-subscription`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
