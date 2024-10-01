@@ -5,8 +5,7 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": { 
-        "distDir": "dist",
-        "buildCommand": "npm run build"
+        "distDir": "dist"
       }
     },
     {
@@ -17,19 +16,19 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/$1.js"
+      "dest": "/api/$1"
     },
     {
-      "handle": "filesystem"
+      "src": "/(assets|images|fonts|icons)/.*",
+      "headers": { "cache-control": "max-age=31536000, immutable" }
+    },
+    {
+      "src": "/(.*\\.[jt]s)",
+      "headers": { "cache-control": "public, max-age=0, must-revalidate" }
     },
     {
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ],
-  "functions": {
-    "api/**/*.js": {
-      "maxDuration": 10
-    }
-  }
+  ]
 }
