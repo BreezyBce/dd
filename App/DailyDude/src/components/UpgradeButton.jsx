@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSubscription } from '../SubscriptionContext';
 import { createCheckoutSession } from '../services/stripe';
+import { useAuth } from '../contexts/AuthContext'; // Make sure this import is correct
 
 const UpgradeButton = () => {
   const navigate = useNavigate();
-  const { subscriptionStatus, currentUser } = useSubscription();
+  const { subscriptionStatus } = useSubscription();
+  const { currentUser } = useAuth(); // Use the auth context to get the current user
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -51,4 +53,4 @@ const UpgradeButton = () => {
   );
 };
 
-export default UpgradeButton; 
+export default UpgradeButton;
