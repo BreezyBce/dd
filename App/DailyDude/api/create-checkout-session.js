@@ -38,10 +38,14 @@ export default async function handler(req, res) {
       res.status(200).json({ url: session.url });
     } catch (error) {
       console.error('Error in create-checkout-session:', error);
-      res.status(500).json({ error: error.message, stack: error.stack });
+      res.status(500).json({ 
+        error: 'An error occurred while creating the checkout session',
+        details: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
   } else {
     res.setHeader('Allow', 'POST');
-    res.status(405).end('Method Not Allowed');
+    res.status(405).json({ error: 'Method Not Allowed' });
   }
 }
