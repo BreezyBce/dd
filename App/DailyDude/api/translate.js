@@ -16,15 +16,20 @@ export default async function handler(req, res) {
     console.log('Attempting translation with:', { text, from, to });
     console.log('Using API key:', process.env.GOOGLE_TRANSLATE_API_KEY ? 'Present' : 'Missing');
 
-    const response = await axios.post(
-      `https://translation.googleapis.com/language/translate/v2?key=${process.env.GOOGLE_TRANSLATE_API_KEY}`,
-      {
-        q: text,
-        source: from,
-        target: to,
-        format: 'text'
-      }
-    );
+   const response = await axios.post(
+  `https://translation.googleapis.com/language/translate/v2`,
+  {
+    q: text,
+    source: from,
+    target: to,
+    format: 'text'
+  },
+  {
+    params: {
+      key: process.env.GOOGLE_TRANSLATE_API_KEY
+    }
+  }
+);
     
     console.log('Google API Response:', response.data);
 
