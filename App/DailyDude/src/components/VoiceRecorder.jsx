@@ -142,22 +142,32 @@ const startRecording = async () => {
     }
   };
 
-  const onDragEnd = (result) => {
-    if (!result.destination) {
-      return;
-    }
+  const onDragEnd = async (result) => {
+  if (!result.destination) {
+    return;
+  }
 
-    const items = Array.from(recordings);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
+  const items = Array.from(recordings);
+  const [reorderedItem] = items.splice(result.source.index, 1);
+  items.splice(result.destination.index, 0, reorderedItem);
 
-    setRecordings(items);
-  };
+  setRecordings(items);
 
-  const RecordingItem = ({ recording, index }) => {
+  // Update the order in Firestore
+  for (let i = 0; i < items.length; i++) {
+    await updateRecording(items[i].id, { order: i });
+  }
+};
+
+  const RecordingItem = ({ recording, index, updateRecording, deleteRecording }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [name, setName] = useState(recording.name);
 
+  const handleNameChange = async (newName) => {
+    if (newName.trim() === recording.name) return;
+    await updateRecording(recording.id, { name: newName.trim() });
+  };
+    
   const updateRecordingName = async (newName) => {
     if (newName.trim() === recording.name) return; // No change, don't update
 
@@ -172,6 +182,22 @@ const startRecording = async () => {
       setName(recording.name);
     }
   };
+
+     const updateRecording = async (id, updatedFields) => {
+    try {
+      const recordingRef = doc(db, "recordings", id);
+      await updateDoc(recordingRef, updatedFields);
+      setRecordings(prevRecordings => 
+        prevRecordings.map(rec => 
+          rec.id === id ? { ...rec, ...updatedFields } : rec
+        )
+      );
+    } catch (error) {
+      console.error("Error updating recording:", error);
+      setError("Failed to update recording. Please try again.");
+    }
+  };
+
 
      return (
     <Draggable draggableId={recording.id} index={index}>
