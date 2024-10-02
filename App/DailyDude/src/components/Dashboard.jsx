@@ -24,8 +24,9 @@ const ALL_WIDGET_TYPES = [
   'WeatherForecast'
 ];
 
-const Dashboard = ({ notes = [], setNotes, expenses = [] }) => {
+const Dashboard = ({ expenses = [] }) => {
   const [newNote, setNewNote] = useState('');
+  const [notes, setNotes] = useState([]);
   const [events, setEvents] = useState([]);
   const currentDate = new Date();
   
@@ -102,34 +103,43 @@ const Dashboard = ({ notes = [], setNotes, expenses = [] }) => {
     saveDashboardLayout();
   }, [widgets, isLoading]);
 
-  useEffect(() => {
-    const fetchTodos = async () => {
-      if (auth.currentUser) {
-        const q = query(collection(db, 'todos'), where("userId", "==", auth.currentUser.uid));
-        const querySnapshot = await getDocs(q);
-        const fetchedTodos = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setNotes(fetchedTodos);
-      }
-    };
+  const fetchTodos = async () => {
+  if (auth.currentUser) {
+    try {
+      const q = query(collection(db, 'todos'), where("userId", "==", auth.currentUser.uid));
+      const querySnapshot = await getDocs(q);
+      const fetchedTodos = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setNotes(fetchedTodos);
+    } catch (error) {
+      console.error("Error fetching todos:", error);
+    }
+  }
+};
 
-    fetchTodos();
-  }, []);
+useEffect(() => {
+  fetchTodos();
+}, []);
   
   const handleAddNote = async () => {
-    if (newNote.trim() !== '' && auth.currentUser) {
-      const newTodo = {
-        content: newNote,
-        completed: false,
-        userId: auth.currentUser.uid
-      };
+  if (newNote.trim() !== '' && auth.currentUser) {
+    const newTodo = {
+      content: newNote,
+      completed: false,
+      userId: auth.currentUser.uid
+    };
+    try {
       const docRef = await addDoc(collection(db, 'todos'), newTodo);
-      setNotes([...notes, { ...newTodo, id: docRef.id }]);
+      const newNoteWithId = { ...newTodo, id: docRef.id };
+      setNotes(prevNotes => [...prevNotes, newNoteWithId]);
       setNewNote('');
+    } catch (error) {
+      console.error("Error adding new note:", error);
     }
-  };
+  }
+};
 
   const toggleNoteCompletion = async (id) => {
     const updatedNotes = notes.map(note =>
@@ -271,45 +281,45 @@ const Dashboard = ({ notes = [], setNotes, expenses = [] }) => {
               const renderWidget = (widget) => {
                 switch (widget.type) {
                   case 'TodoList':
-                    return (
-                      <div className="bg-white p-6 rounded-lg flex flex-col h-full dark:bg-dark-background-2">
-                        <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-400">To-Do List</h2>
-                        <div className="flex-grow overflow-y-auto mb-4">
-                          <ul>
-                            {notes.map(note => (
-                              <li key={note.id} className="mb-2 flex items-center justify-between text-gray-800 dark:text-gray-400">
-                                <div className="flex items-center">
-                                  <input
-                                    type="checkbox"
-                                    checked={note.completed}
-                                    onChange={() => toggleNoteCompletion(note.id)}
-                                    className="mr-2"
-                                  />
-                                  <span className={note.completed ? 'line-through text-gray-500' : ''}>
-                                    {note.content}
-                                  </span>
-                                </div>
-                                <button onClick={() => handleDeleteNote(note.id)} className="text-red-500">
-                                  <FaTrash />
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div className="mt-auto">
-                          <div className="flex">
-                            <input
-                              type="text"
-                              value={newNote}
-                              onChange={(e) => setNewNote(e.target.value)}
-                              className="flex-grow p-2 border rounded-l"
-                              placeholder="Add a new note"
-                            />
-                            <button onClick={handleAddNote} className="bg-customorange-500 text-white px-4 py-2 rounded-r hover:bg-customorange-400">Add</button>
-                          </div>
-                        </div>
-                      </div>
-                    );
+  return (
+    <div className="bg-white p-6 rounded-lg flex flex-col h-full dark:bg-dark-background-2">
+      <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-400">To-Do List</h2>
+      <div className="flex-grow overflow-y-auto mb-4">
+        <ul>
+          {notes.map(note => (
+            <li key={note.id} className="mb-2 flex items-center justify-between text-gray-800 dark:text-gray-400">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={note.completed}
+                  onChange={() => toggleNoteCompletion(note.id)}
+                  className="mr-2"
+                />
+                <span className={note.completed ? 'line-through text-gray-500' : ''}>
+                  {note.content}
+                </span>
+              </div>
+              <button onClick={() => handleDeleteNote(note.id)} className="text-red-500">
+                <FaTrash />
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="mt-auto">
+        <div className="flex">
+          <input
+            type="text"
+            value={newNote}
+            onChange={(e) => setNewNote(e.target.value)}
+            className="flex-grow p-2 border rounded-l"
+            placeholder="Add a new note"
+          />
+          <button onClick={handleAddNote} className="bg-customorange-500 text-white px-4 py-2 rounded-r hover:bg-customorange-400">Add</button>
+        </div>
+      </div>
+    </div>
+  );
       case 'EventsList':
         return (
           <div className="bg-white p-6 rounded-lg dark:bg-dark-background-2">
