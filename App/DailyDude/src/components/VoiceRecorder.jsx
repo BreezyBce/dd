@@ -13,6 +13,9 @@ const VoiceRecorder = () => {
   const mediaRecorder = useRef(null);
   const [transcribedText, setTranscribedText] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const audioChunks = useRef([]);
+
+  
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -46,30 +49,48 @@ const VoiceRecorder = () => {
   };
 
   const startRecording = async () => {
-    if (!auth.currentUser) {
-      setError("Please log in to record audio.");
-      return;
-    }
+  if (!auth.currentUser) {
+    setError("Please log in to record audio.");
+    return;
+  }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder.current = new MediaRecorder(stream);
-      mediaRecorder.current.start();
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder.current = new MediaRecorder(stream);
+    audioChunks.current = []; // Reset audioChunks
 
-      const audioChunks = [];
-      mediaRecorder.current.addEventListener("dataavailable", event => {
-        audioChunks.push(event.data);
-      });
+    mediaRecorder.current.addEventListener("dataavailable", event => {
+      audioChunks.current.push(event.data);
+    });
 
-      mediaRecorder.current.addEventListener("stop", async () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/mp4' });
-        const timestamp = Date.now();
-        const fileName = `recording_${timestamp}.mp4`;
-        const fileRef = ref(storage, `recordings/${auth.currentUser.uid}/${fileName}`);
+    mediaRecorder.current.addEventListener("stop", async () => {
+      const audioBlob = new Blob(audioChunks.current, { type: 'audio/mp4' });
+      const timestamp = Date.now();
+      const fileName = `recording_${timestamp}.mp4`;
+      const fileRef = ref(storage, `recordings/${auth.currentUser.uid}/${fileName}`);
 
-        try {
-          await uploadBytes(fileRef, audioBlob);
-          const downloadURL = await getDownloadURL(fileRef);
+      try {
+        await uploadBytes(fileRef, audioBlob);
+        const downloadURL = await getDownloadURL(fileRef);
+
+        // Start transcription
+        startTranscription(audioBlob);
+
+        // Save recording (implement this function as needed)
+        await saveRecording(audioBlob, downloadURL, fileName);
+      } catch (error) {
+        console.error("Error uploading file:", error);
+        setError("Failed to upload recording. Please try again.");
+      }
+    });
+
+    mediaRecorder.current.start();
+    setIsRecording(true);
+  } catch (err) {
+    console.error("Error accessing the microphone:", err);
+    setError("Failed to access microphone. Please check your permissions.");
+  }
+};
 
           const newRecording = {
             url: downloadURL,
@@ -96,14 +117,9 @@ const VoiceRecorder = () => {
   };
 
   const stopRecording = () => {
-  if (mediaRecorder.current) {
+  if (mediaRecorder.current && isRecording) {
     mediaRecorder.current.stop();
     setIsRecording(false);
-    mediaRecorder.current.addEventListener("stop", async () => {
-      const audioBlob = new Blob(audioChunks, { type: 'audio/mp4' });
-
-       startTranscription(audioBlob);
-    });
   }
 };
 
@@ -208,9 +224,8 @@ const VoiceRecorder = () => {
     recognition.start();
   };
 
-  const saveRecording = async (audioBlob, downloadURL) => {
+  const saveRecording = async (audioBlob, downloadURL, fileName) => {
   const timestamp = Date.now();
-  const fileName = `recording_${timestamp}.mp4`;
 
   try {
     const docRef = await addDoc(collection(db, "recordings"), {
