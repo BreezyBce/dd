@@ -88,69 +88,83 @@ const VoiceRecorder = () => {
   };
 
   const saveRecording = async (audioBlob) => {
-    const timestamp = Date.now();
-    const fileName = `recording_${timestamp}.mp4`;
-    const fileRef = ref(storage, `recordings/${auth.currentUser.uid}/${fileName}`);
+  const timestamp = Date.now();
+  const fileName = `recording_${timestamp}.mp4`;
+  const fileRef = ref(storage, `recordings/${auth.currentUser.uid}/${fileName}`);
 
-    try {
-      await uploadBytes(fileRef, audioBlob);
-      const downloadURL = await getDownloadURL(fileRef);
+  try {
+    await uploadBytes(fileRef, audioBlob);
+    const downloadURL = await getDownloadURL(fileRef);
 
-      // Start transcription
-      await startTranscription(audioBlob);
+    // Start transcription and wait for it to complete
+    const transcription = await startTranscription(audioBlob);
 
-      const docRef = await addDoc(collection(db, "recordings"), {
+    const docRef = await addDoc(collection(db, "recordings"), {
+      url: downloadURL,
+      name: `Recording ${recordings.length + 1}`,
+      timestamp: timestamp,
+      fileName: fileName,
+      userId: auth.currentUser.uid,
+      transcription: transcription
+    });
+
+    setRecordings(prev => [
+      {
+        id: docRef.id,
         url: downloadURL,
-        name: `Recording ${recordings.length + 1}`,
+        name: `Recording ${prev.length + 1}`,
         timestamp: timestamp,
         fileName: fileName,
-        userId: auth.currentUser.uid,
-        transcription: transcribedText
-      });
+        transcription: transcription
+      },
+      ...prev,
+    ]);
 
-      setRecordings(prev => [
-        {
-          id: docRef.id,
-          url: downloadURL,
-          name: `Recording ${prev.length + 1}`,
-          timestamp: timestamp,
-          fileName: fileName,
-          transcription: transcribedText
-        },
-        ...prev,
-      ]);
+    setTranscribedText('');
+  } catch (error) {
+    console.error("Error saving recording:", error);
+    setError("Failed to save recording. Please try again.");
+  }
+};
 
-      setTranscribedText('');
-    } catch (error) {
-      throw error;
-    }
-  };
-
-  const startTranscription = async (audioBlob) => {
+  const startTranscription = (audioBlob) => {
+  return new Promise((resolve, reject) => {
     setIsTranscribing(true);
+    let fullTranscript = '';
+
     try {
       const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
       recognition.lang = 'en-US';
-      recognition.continuous = false;
+      recognition.continuous = true;
       recognition.interimResults = false;
 
       recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setTranscribedText(transcript);
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            fullTranscript += event.results[i][0].transcript + ' ';
+          }
+        }
+        setTranscribedText(fullTranscript.trim());
       };
 
       recognition.onerror = (event) => {
         console.error('Speech recognition error', event.error);
         setError('Failed to transcribe audio. Please try again.');
+        setIsTranscribing(false);
+        reject(event.error);
       };
 
       recognition.onend = () => {
         setIsTranscribing(false);
+        resolve(fullTranscript.trim());
       };
 
       // Convert blob to audio element and play
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
+      audio.addEventListener('ended', () => {
+        recognition.stop();
+      });
       audio.play();
 
       recognition.start();
@@ -158,8 +172,10 @@ const VoiceRecorder = () => {
       console.error("Error starting transcription:", error);
       setIsTranscribing(false);
       setError('Speech recognition is not supported in this browser.');
+      reject(error);
     }
-  };
+  });
+};
 
   const updateRecording = async (id, updatedFields) => {
     try {
@@ -288,28 +304,35 @@ const VoiceRecorder = () => {
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md dark:bg-dark-background-2 text-gray-800 dark:text-gray-400">
-      <h2 className="text-2xl font-bold mb-4">Voice Recorder</h2>
-      {auth.currentUser ? (
-        <>
-          <div className="flex justify-center mb-4">
-            {!isRecording ? (
-              <button onClick={startRecording} className="bg-customorange-500 text-white px-4 py-2 rounded hover:bg-customorange-400 transition duration-300">
-                Start Recording
-              </button>
-            ) : (
-              <button onClick={stopRecording} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition duration-300">
-                Stop Recording
-              </button>
-            )}
-          </div>
-          {isTranscribing && <p className="text-center mb-4">Transcribing...</p>}
-          {transcribedText && (
-            <div className="mb-4">
-              <h3 className="font-bold mb-2">Transcribed Text:</h3>
-              <p className="bg-gray-100 p-2 rounded">{transcribedText}</p>
-            </div>
+  <div className="bg-white p-6 rounded-lg shadow-md dark:bg-dark-background-2 text-gray-800 dark:text-gray-400">
+    <h2 className="text-2xl font-bold mb-4">Voice Recorder</h2>
+    {auth.currentUser ? (
+      <>
+        <div className="flex justify-center mb-4">
+          {!isRecording ? (
+            <button onClick={startRecording} className="bg-customorange-500 text-white px-4 py-2 rounded hover:bg-customorange-400 transition duration-300">
+              Start Recording
+            </button>
+          ) : (
+            <button onClick={stopRecording} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition duration-300">
+              Stop Recording
+            </button>
           )}
+        </div>
+        {isTranscribing && (
+          <div className="mb-4 text-center">
+            <p>Transcribing...</p>
+            <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+              <div className="bg-blue-600 h-2.5 rounded-full w-full animate-pulse"></div>
+            </div>
+          </div>
+        )}
+        {transcribedText && (
+          <div className="mb-4">
+            <h3 className="font-bold mb-2">Current Transcription:</h3>
+            <p className="bg-gray-100 p-2 rounded">{transcribedText}</p>
+          </div>
+        )}
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="recordings">
               {(provided) => (
