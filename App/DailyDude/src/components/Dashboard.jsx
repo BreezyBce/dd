@@ -313,7 +313,7 @@ useEffect(() => {
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
             className="flex-grow p-2 border rounded-l"
-            placeholder="Add a new note"
+            placeholder="Add a new To-Do"
           />
           <button onClick={handleAddNote} className="bg-customorange-500 text-white px-4 py-2 rounded-r hover:bg-customorange-400">Add</button>
         </div>
