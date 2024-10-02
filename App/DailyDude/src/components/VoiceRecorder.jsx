@@ -43,62 +43,66 @@ const VoiceRecorder = () => {
     }
   };
 
-  const startRecording = async () => {
-    if (!auth.currentUser) {
-      setError("Please log in to record audio.");
-      return;
-    }
+const startRecording = async () => {
+  if (!auth.currentUser) {
+    setError("Please log in to record audio.");
+    return;
+  }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder.current = new MediaRecorder(stream);
-      mediaRecorder.current.start();
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder.current = new MediaRecorder(stream);
+    mediaRecorder.current.start();
 
-      const audioChunks = [];
-      mediaRecorder.current.addEventListener("dataavailable", event => {
-        audioChunks.push(event.data);
-      });
+    const audioChunks = [];
+    mediaRecorder.current.addEventListener("dataavailable", event => {
+      audioChunks.push(event.data);
+    });
 
-      mediaRecorder.current.addEventListener("stop", async () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/mp4' });
-        const timestamp = Date.now();
-        const fileName = `recording_${timestamp}.mp4`;
-        const fileRef = ref(storage, `recordings/${auth.currentUser.uid}/${fileName}`);
+    mediaRecorder.current.addEventListener("stop", async () => {
+      const audioBlob = new Blob(audioChunks, { type: 'audio/mp4' });
+      const timestamp = Date.now();
+      const fileName = `recording_${timestamp}.mp4`;
+      const fileRef = ref(storage, `recordings/${auth.currentUser.uid}/${fileName}`);
 
-        try {
-          await uploadBytes(fileRef, audioBlob);
-          const downloadURL = await getDownloadURL(fileRef);
+      try {
+        await uploadBytes(fileRef, audioBlob);
+        const downloadURL = await getDownloadURL(fileRef);
 
-          const docRef = await addDoc(collection(db, "recordings"), {
+        const docRef = await addDoc(collection(db, "recordings"), {
+          url: downloadURL,
+          name: `Recording ${recordings.length + 1}`,
+          timestamp: timestamp,
+          fileName: fileName,
+          userId: auth.currentUser.uid
+        });
+
+        setRecordings(prev => [
+          {
+            id: docRef.id,
             url: downloadURL,
-            name: `Recording ${recordings.length + 1}`,
+            name: `Recording ${prev.length + 1}`,
             timestamp: timestamp,
-            fileName: fileName,
-            userId: auth.currentUser.uid
-          });
-
-          setRecordings(prev => [
-            {
-              id: docRef.id,
-              url: downloadURL,
-              name: `Recording ${prev.length + 1}`,
-              timestamp: timestamp,
-              fileName: fileName
-            },
-            ...prev,
-          ]);
-        } catch (error) {
-          console.error("Error uploading file:", error);
+            fileName: fileName
+          },
+          ...prev,
+        ]);
+      } catch (error) {
+        console.error("Error uploading file:", error);
+        if (error.code === 'storage/unauthorized') {
+          setError("CORS error: Unable to upload file. Please check your Firebase Storage rules.");
+        } else {
           setError("Failed to upload recording. Please try again.");
         }
-      });
+      }
+    });
 
-      setIsRecording(true);
-    } catch (err) {
-      console.error("Error accessing the microphone:", err);
-      setError("Failed to access microphone. Please check your permissions.");
-    }
-  };
+    setIsRecording(true);
+  } catch (err) {
+    console.error("Error accessing the microphone:", err);
+    setError("Failed to access microphone. Please check your permissions.");
+  }
+};
 
   const stopRecording = () => {
     if (mediaRecorder.current) {
