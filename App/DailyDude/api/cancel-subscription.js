@@ -1,16 +1,13 @@
 import Stripe from 'stripe';
-import { initializeApp, getApps } from 'firebase/app';
-import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Initialize Firebase if it hasn't been initialized
+// Initialize Firebase Admin SDK if it hasn't been initialized
 if (!getApps().length) {
   initializeApp({
-    apiKey: process.env.FIREBASE_API_KEY,
-    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    // Add other config options as needed
+    credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY))
   });
 }
 
@@ -22,10 +19,9 @@ export default async function handler(req, res) {
       const { userId } = req.body;
 
       // Get the user's document from Firestore
-      const userDocRef = doc(db, 'users', userId);
-      const userDoc = await getDoc(userDocRef);
+      const userDoc = await db.collection('users').doc(userId).get();
       
-      if (!userDoc.exists()) {
+      if (!userDoc.exists) {
         throw new Error('User not found');
       }
 
@@ -34,7 +30,7 @@ export default async function handler(req, res) {
 
       if (!stripeCustomerId) {
         // If there's no Stripe customer ID, just update the user's plan to free
-        await updateDoc(userDocRef, { subscriptionStatus: 'free' });
+        await db.collection('users').doc(userId).update({ subscriptionStatus: 'free' });
         return res.status(200).json({ message: 'User downgraded to free plan' });
       }
 
@@ -46,7 +42,7 @@ export default async function handler(req, res) {
 
       if (subscriptions.data.length === 0) {
         // If there are no active subscriptions, just update the user's plan to free
-        await updateDoc(userDocRef, { subscriptionStatus: 'free' });
+        await db.collection('users').doc(userId).update({ subscriptionStatus: 'free' });
         return res.status(200).json({ message: 'User downgraded to free plan' });
       }
 
@@ -55,7 +51,7 @@ export default async function handler(req, res) {
       await stripe.subscriptions.del(subscription.id);
 
       // Update the user's subscription status in Firestore
-      await updateDoc(userDocRef, { subscriptionStatus: 'free' });
+      await db.collection('users').doc(userId).update({ subscriptionStatus: 'free' });
 
       res.status(200).json({ message: 'Subscription cancelled successfully' });
     } catch (error) {
