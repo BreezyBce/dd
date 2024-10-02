@@ -24,7 +24,7 @@ const withSubscription = (WrappedComponent, requiredPlan = 'free') => {
     } else {
       return (
         <div className="flex flex-col items-center justify-center h-full">
-          <p className="mb-4 text-lg">This feature requires a premium subscription.</p>
+          <p className="mb-4 text-gray-800 dark:text-gray-400">This feature requires a premium subscription.</p>
           <UpgradeButton />
         </div>
       );
