@@ -96,11 +96,16 @@ const VoiceRecorder = () => {
   };
 
   const stopRecording = () => {
-    if (mediaRecorder.current) {
-      mediaRecorder.current.stop();
-      setIsRecording(false);
-    }
-  };
+  if (mediaRecorder.current) {
+    mediaRecorder.current.stop();
+    setIsRecording(false);
+    mediaRecorder.current.addEventListener("stop", async () => {
+      const audioBlob = new Blob(audioChunks, { type: 'audio/mp4' });
+
+       startTranscription(audioBlob);
+    });
+  }
+};
 
   const updateRecording = async (id, updatedFields) => {
     try {
@@ -203,17 +208,56 @@ const VoiceRecorder = () => {
     recognition.start();
   };
 
+  const saveRecording = async (audioBlob, downloadURL) => {
+  const timestamp = Date.now();
+  const fileName = `recording_${timestamp}.mp4`;
+
+  try {
+    const docRef = await addDoc(collection(db, "recordings"), {
+      url: downloadURL,
+      name: `Recording ${recordings.length + 1}`,
+      timestamp: timestamp,
+      fileName: fileName,
+      userId: auth.currentUser.uid,
+      transcription: transcribedText
+    });
+
+    setRecordings(prev => [
+      {
+        id: docRef.id,
+        url: downloadURL,
+        name: `Recording ${prev.length + 1}`,
+        timestamp: timestamp,
+        fileName: fileName,
+        transcription: transcribedText
+      },
+      ...prev,
+    ]);
+
+    setTranscribedText('');
+  } catch (error) {
+    console.error("Error saving recording:", error);
+    setError("Failed to save recording. Please try again.");
+  }
+};
+
     return (
-      <Draggable draggableId={recording.id} index={index}>
-        {(provided) => (
-          <div
-            ref={provided.innerRef}
-            {...provided.draggableProps}
-            className="flex items-center bg-gray-100 p-3 rounded-lg mb-2"
-          >
+    <Draggable draggableId={recording.id} index={index}>
+      {(provided) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          className="flex flex-col bg-gray-100 p-3 rounded-lg mb-2"
+        >
             <div {...provided.dragHandleProps} className="mr-2 text-gray-500">
               <FaGripVertical />
             </div>
+          {recording.transcription && (
+            <div className="mt-2">
+              <h4 className="font-semibold">Transcription:</h4>
+              <p className="text-sm">{recording.transcription}</p>
+            </div>
+          )}
             <div className="flex-shrink-0 mr-4 text-sm text-gray-600">
               <div>{new Date(recording.timestamp).toLocaleDateString()}</div>
               <div>{new Date(recording.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
@@ -261,21 +305,28 @@ const VoiceRecorder = () => {
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md dark:bg-dark-background-2 text-gray-800 dark:text-gray-400">
-      <h2 className="text-2xl font-bold mb-4">Voice Recorder</h2>
-      {auth.currentUser ? (
-        <>
-          <div className="flex justify-center mb-4">
-            {!isRecording ? (
-              <button onClick={startRecording} className="bg-customorange-500 text-white px-4 py-2 rounded hover:bg-customorange-400 transition duration-300">
-                Start Recording
-              </button>
-            ) : (
-              <button onClick={stopRecording} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition duration-300">
-                Stop Recording
-              </button>
-            )}
+  <div className="bg-white p-6 rounded-lg shadow-md dark:bg-dark-background-2 text-gray-800 dark:text-gray-400">
+    <h2 className="text-2xl font-bold mb-4">Voice Recorder</h2>
+    {auth.currentUser ? (
+      <>
+        <div className="flex justify-center mb-4">
+          {!isRecording ? (
+            <button onClick={startRecording} className="bg-customorange-500 text-white px-4 py-2 rounded hover:bg-customorange-400 transition duration-300">
+              Start Recording
+            </button>
+          ) : (
+            <button onClick={stopRecording} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition duration-300">
+              Stop Recording
+            </button>
+          )}
+        </div>
+        {isTranscribing && <p className="text-center mb-4">Transcribing...</p>}
+        {transcribedText && (
+          <div className="mb-4">
+            <h3 className="font-bold mb-2">Transcribed Text:</h3>
+            <p className="bg-gray-100 p-2 rounded">{transcribedText}</p>
           </div>
+        )}
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="recordings">
               {(provided) => (
