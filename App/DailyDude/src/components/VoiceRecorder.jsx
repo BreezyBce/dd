@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FaEllipsisV, FaDownload, FaTrash, FaShare, FaGripVertical } from 'react-icons/fa';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import { collection, addDoc, getDocs, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage, db, auth } from '../firebase';
 
