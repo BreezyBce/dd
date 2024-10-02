@@ -12,10 +12,9 @@ const VoiceRecorder = () => {
   const [error, setError] = useState(null);
   const [transcribedText, setTranscribedText] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [language, setLanguage] = useState('en-US');
   const mediaRecorder = useRef(null);
   const audioChunks = useRef([]);
-  const [language, setLanguage] = useState('en-US');
-
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -90,128 +89,125 @@ const VoiceRecorder = () => {
   };
 
   const saveRecording = async (audioBlob) => {
-  const timestamp = Date.now();
-  const fileName = `recording_${timestamp}.mp4`;
-  const fileRef = ref(storage, `recordings/${auth.currentUser.uid}/${fileName}`);
-
-  try {
-    await uploadBytes(fileRef, audioBlob);
-    const downloadURL = await getDownloadURL(fileRef);
-
-    // Start transcription and wait for it to complete
-    const transcription = await startTranscription(audioBlob, language);
-
-    const handleLanguageChange = (e) => {
-    setLanguage(e.target.value);
-    };
-    
-    const docRef = await addDoc(collection(db, "recordings"), {
-      url: downloadURL,
-      name: `Recording ${recordings.length + 1}`,
-      timestamp: timestamp,
-      fileName: fileName,
-      userId: auth.currentUser.uid,
-      transcription: transcription
-    });
-
-    setRecordings(prev => [
-      {
-        id: docRef.id,
-        url: downloadURL,
-        name: `Recording ${prev.length + 1}`,
-        timestamp: timestamp,
-        fileName: fileName,
-        transcription: transcription
-      },
-      ...prev,
-    ]);
-
-    setTranscribedText('');
-  } catch (error) {
-    console.error("Error saving recording:", error);
-    setError("Failed to save recording. Please try again.");
-  }
-};
-
- const startTranscription = (audioBlob, language = 'en-US') => {
-  return new Promise((resolve, reject) => {
-    setIsTranscribing(true);
-    let fullTranscript = '';
+    const timestamp = Date.now();
+    const fileName = `recording_${timestamp}.mp4`;
+    const fileRef = ref(storage, `recordings/${auth.currentUser.uid}/${fileName}`);
 
     try {
-      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-      recognition.lang = language;
-      recognition.continuous = true;
-      recognition.interimResults = true;
+      await uploadBytes(fileRef, audioBlob);
+      const downloadURL = await getDownloadURL(fileRef);
 
-      recognition.onresult = (event) => {
-        let interimTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            fullTranscript += formatSentence(transcript, language);
-          } else {
-            interimTranscript += transcript;
-          }
-        }
-        setTranscribedText(fullTranscript + interimTranscript);
-      };
+      // Start transcription and wait for it to complete
+      const transcription = await startTranscription(audioBlob, language);
 
-      recognition.onend = () => {
-        setIsTranscribing(false);
-        resolve(fullTranscript.trim());
-      };
-
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error', event.error);
-        setError('Failed to transcribe audio. Please try again.');
-        setIsTranscribing(false);
-        reject(event.error);
-      };
-
-      // Convert blob to audio element and play
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      audio.addEventListener('ended', () => {
-        recognition.stop();
+      const docRef = await addDoc(collection(db, "recordings"), {
+        url: downloadURL,
+        name: `Recording ${recordings.length + 1}`,
+        timestamp: timestamp,
+        fileName: fileName,
+        userId: auth.currentUser.uid,
+        transcription: transcription,
+        language: language
       });
-      audio.play();
 
-      recognition.start();
+      setRecordings(prev => [
+        {
+          id: docRef.id,
+          url: downloadURL,
+          name: `Recording ${prev.length + 1}`,
+          timestamp: timestamp,
+          fileName: fileName,
+          transcription: transcription,
+          language: language
+        },
+        ...prev,
+      ]);
+
+      setTranscribedText('');
     } catch (error) {
-      console.error("Error starting transcription:", error);
-      setIsTranscribing(false);
-      setError('Speech recognition is not supported in this browser.');
-      reject(error);
+      throw error;
     }
-  });
-};
-
-const formatSentence = (sentence, language) => {
-  sentence = sentence.trim();
-  
-  // Capitalize the first letter
-  sentence = sentence.charAt(0).toUpperCase() + sentence.slice(1);
-
-  // Add appropriate punctuation
-  if (isQuestion(sentence, language)) {
-    sentence += '? ';
-  } else {
-    sentence += '. ';
-  }
-
-  return sentence;
-};
-
-const isQuestion = (sentence, language) => {
-  const questionWords = {
-    'en-US': /^(who|what|when|where|why|how|is|are|am|do|does|did|can|could|would|should|has|have)\b/i,
-    'fr-FR': /^(qui|que|quoi|quand|où|pourquoi|comment|est-ce que|est-ce qu')\b/i,
-    'zh-CN': /^(谁|什么|何时|哪里|为什么|怎么|吗|呢|吧)\b/i
   };
 
-  return questionWords[language].test(sentence.trim());
-};
+  const startTranscription = (audioBlob, language) => {
+    return new Promise((resolve, reject) => {
+      setIsTranscribing(true);
+      let fullTranscript = '';
+
+      try {
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = language;
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onresult = (event) => {
+          let interimTranscript = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              fullTranscript += formatSentence(transcript, language);
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+          setTranscribedText(fullTranscript + interimTranscript);
+        };
+
+        recognition.onend = () => {
+          setIsTranscribing(false);
+          resolve(fullTranscript.trim());
+        };
+
+        recognition.onerror = (event) => {
+          console.error('Speech recognition error', event.error);
+          setError('Failed to transcribe audio. Please try again.');
+          setIsTranscribing(false);
+          reject(event.error);
+        };
+
+        // Convert blob to audio element and play
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audio.addEventListener('ended', () => {
+          recognition.stop();
+        });
+        audio.play();
+
+        recognition.start();
+      } catch (error) {
+        console.error("Error starting transcription:", error);
+        setIsTranscribing(false);
+        setError('Speech recognition is not supported in this browser.');
+        reject(error);
+      }
+    });
+  };
+
+  const formatSentence = (sentence, language) => {
+    sentence = sentence.trim();
+    
+    // Capitalize the first letter
+    sentence = sentence.charAt(0).toUpperCase() + sentence.slice(1);
+
+    // Add appropriate punctuation
+    if (isQuestion(sentence, language)) {
+      sentence += '? ';
+    } else {
+      sentence += '. ';
+    }
+
+    return sentence;
+  };
+
+  const isQuestion = (sentence, language) => {
+    const questionWords = {
+      'en-US': /^(who|what|when|where|why|how|is|are|am|do|does|did|can|could|would|should|has|have)\b/i,
+      'fr-FR': /^(qui|que|quoi|quand|où|pourquoi|comment|est-ce que|est-ce qu')\b/i,
+      'zh-CN': /^(谁|什么|何时|哪里|为什么|怎么|吗|呢|吧)\b/i
+    };
+
+    return questionWords[language].test(sentence.trim());
+  };
 
   const updateRecording = async (id, updatedFields) => {
     try {
@@ -267,6 +263,10 @@ const isQuestion = (sentence, language) => {
     items.splice(result.destination.index, 0, reorderedItem);
 
     setRecordings(items);
+  };
+
+  const handleLanguageChange = (e) => {
+    setLanguage(e.target.value);
   };
 
   const RecordingItem = ({ recording, index }) => {
@@ -368,24 +368,23 @@ const isQuestion = (sentence, language) => {
               </button>
             )}
           </div>
-        {isTranscribing && (
-          <div className="mb-4 text-center">
-            <p>Transcribing...</p>
-            <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-              <div className="bg-blue-600 h-2.5 rounded-full w-full animate-pulse"></div>
+          {isTranscribing && (
+            <div className="mb-4 text-center">
+              <p>Transcribing...</p>
+              <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                <div className="bg-blue-600 h-2.5 rounded-full w-full animate-pulse"></div>
+              </div>
             </div>
-          </div>
-        )}
-        {transcribedText && (
-          <div className="mb-4">
-            <h3 className="font-bold mb-2">Current Transcription:</h3>
-            <p className="bg-gray-100 p-2 rounded">{transcribedText}</p>
-          </div>
-        )}
+          )}
+          {transcribedText && (
+            <div className="mb-4">
+              <h3 className="font-bold mb-2">Current Transcription:</h3>
+              <p className="bg-gray-100 p-2 rounded">{transcribedText}</p>
+            </div>
+          )}
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="recordings">
-              {(provided) => (
-                <div {...provided.droppableProps} ref={provided.innerRef} className="mt-4 space-y-2">
+              {(provided) => (<div {...provided.droppableProps} ref={provided.innerRef} className="mt-4 space-y-2">
                   {recordings.map((recording, index) => (
                     <RecordingItem 
                       key={recording.id} 
