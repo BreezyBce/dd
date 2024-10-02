@@ -14,6 +14,8 @@ const VoiceRecorder = () => {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorder = useRef(null);
   const audioChunks = useRef([]);
+  const [language, setLanguage] = useState('en-US');
+
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -97,8 +99,12 @@ const VoiceRecorder = () => {
     const downloadURL = await getDownloadURL(fileRef);
 
     // Start transcription and wait for it to complete
-    const transcription = await startTranscription(audioBlob);
+    const transcription = await startTranscription(audioBlob, language);
 
+    const handleLanguageChange = (e) => {
+    setLanguage(e.target.value);
+    };
+    
     const docRef = await addDoc(collection(db, "recordings"), {
       url: downloadURL,
       name: `Recording ${recordings.length + 1}`,
@@ -127,45 +133,32 @@ const VoiceRecorder = () => {
   }
 };
 
-  const startTranscription = (audioBlob) => {
+  const startTranscription = (audioBlob, language = 'en-US') => {
   return new Promise((resolve, reject) => {
     setIsTranscribing(true);
     let fullTranscript = '';
-    let currentSentence = '';
-    let lastPauseTime = Date.now();
 
     try {
       const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-      recognition.lang = 'en-US';
+      recognition.lang = language;
       recognition.continuous = true;
       recognition.interimResults = true;
 
       recognition.onresult = (event) => {
+        let interimTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            currentSentence += transcript + ' ';
-            const now = Date.now();
-            if (now - lastPauseTime > 700) { // Pause threshold for period
-              fullTranscript += formatSentence(currentSentence) + '. ';
-              currentSentence = '';
-            } else if (now - lastPauseTime > 300) { // Pause threshold for comma
-              fullTranscript += formatSentence(currentSentence) + ', ';
-              currentSentence = '';
-            }
-            lastPauseTime = now;
+            fullTranscript += formatSentence(transcript, language);
           } else {
-            setTranscribedText(fullTranscript + formatSentence(currentSentence + transcript));
+            interimTranscript += transcript;
           }
         }
+        setTranscribedText(fullTranscript + interimTranscript);
       };
 
       recognition.onend = () => {
-        if (currentSentence) {
-          fullTranscript += formatSentence(currentSentence) + '.';
-        }
         setIsTranscribing(false);
-        setTranscribedText(fullTranscript.trim());
         resolve(fullTranscript.trim());
       };
 
@@ -192,6 +185,32 @@ const VoiceRecorder = () => {
       reject(error);
     }
   });
+};
+
+const formatSentence = (sentence, language) => {
+  sentence = sentence.trim();
+  
+  // Capitalize the first letter
+  sentence = sentence.charAt(0).toUpperCase() + sentence.slice(1);
+
+  // Add appropriate punctuation
+  if (isQuestion(sentence, language)) {
+    sentence += '? ';
+  } else {
+    sentence += '. ';
+  }
+
+  return sentence;
+};
+
+const isQuestion = (sentence, language) => {
+  const questionWords = {
+    'en-US': /^(who|what|when|where|why|how|is|are|am|do|does|did|can|could|would|should|has|have)\b/i,
+    'fr-FR': /^(qui|que|quoi|quand|où|pourquoi|comment|est-ce que|est-ce qu')\b/i,
+    'zh-CN': /^(谁|什么|何时|哪里|为什么|怎么|吗|呢|吧)\b/i
+  };
+
+  return questionWords[language].test(sentence.trim());
 };
 
 const formatSentence = (sentence) => {
@@ -343,21 +362,34 @@ const formatSentence = (sentence) => {
   }
 
   return (
-  <div className="bg-white p-6 rounded-lg shadow-md dark:bg-dark-background-2 text-gray-800 dark:text-gray-400">
-    <h2 className="text-2xl font-bold mb-4">Voice Recorder</h2>
-    {auth.currentUser ? (
-      <>
-        <div className="flex justify-center mb-4">
-          {!isRecording ? (
-            <button onClick={startRecording} className="bg-customorange-500 text-white px-4 py-2 rounded hover:bg-customorange-400 transition duration-300">
-              Start Recording
-            </button>
-          ) : (
-            <button onClick={stopRecording} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition duration-300">
-              Stop Recording
-            </button>
-          )}
-        </div>
+    <div className="bg-white p-6 rounded-lg shadow-md dark:bg-dark-background-2 text-gray-800 dark:text-gray-400">
+      <h2 className="text-2xl font-bold mb-4">Voice Recorder</h2>
+      {auth.currentUser ? (
+        <>
+          <div className="mb-4">
+            <label htmlFor="language-select" className="block mb-2">Select Language:</label>
+            <select
+              id="language-select"
+              value={language}
+              onChange={handleLanguageChange}
+              className="w-full p-2 border rounded"
+            >
+              <option value="en-US">English</option>
+              <option value="fr-FR">French</option>
+              <option value="zh-CN">Chinese (Simplified)</option>
+            </select>
+          </div>
+          <div className="flex justify-center mb-4">
+            {!isRecording ? (
+              <button onClick={startRecording} className="bg-customorange-500 text-white px-4 py-2 rounded hover:bg-customorange-400 transition duration-300">
+                Start Recording
+              </button>
+            ) : (
+              <button onClick={stopRecording} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition duration-300">
+                Stop Recording
+              </button>
+            )}
+          </div>
         {isTranscribing && (
           <div className="mb-4 text-center">
             <p>Transcribing...</p>
