@@ -34,7 +34,7 @@ const VoiceRecorder = () => {
         id: doc.id,
         ...doc.data()
       }));
-      setRecordings(loadedRecordings.sort((a, b) => b.timestamp - a.timestamp));
+      setRecordings(loadedRecordings.sort((a, b) => (a.order || 0) - (b.order || 0)));
     } catch (error) {
       console.error("Error loading recordings:", error);
       setError("Failed to load recordings. Please try again.");
@@ -43,71 +43,75 @@ const VoiceRecorder = () => {
     }
   };
 
-const startRecording = async () => {
-  if (!auth.currentUser) {
-    setError("Please log in to record audio.");
-    return;
-  }
+  const startRecording = async () => {
+    if (!auth.currentUser) {
+      setError("Please log in to record audio.");
+      return;
+    }
 
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder.current = new MediaRecorder(stream);
-    mediaRecorder.current.start();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder.current = new MediaRecorder(stream);
+      mediaRecorder.current.start();
 
-    const audioChunks = [];
-    mediaRecorder.current.addEventListener("dataavailable", event => {
-      audioChunks.push(event.data);
-    });
+      const audioChunks = [];
+      mediaRecorder.current.addEventListener("dataavailable", event => {
+        audioChunks.push(event.data);
+      });
 
-    mediaRecorder.current.addEventListener("stop", async () => {
-      const audioBlob = new Blob(audioChunks, { type: 'audio/mp4' });
-      const timestamp = Date.now();
-      const fileName = `recording_${timestamp}.mp4`;
-      const fileRef = ref(storage, `recordings/${auth.currentUser.uid}/${fileName}`);
+      mediaRecorder.current.addEventListener("stop", async () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/mp4' });
+        const timestamp = Date.now();
+        const fileName = `recording_${timestamp}.mp4`;
+        const fileRef = ref(storage, `recordings/${auth.currentUser.uid}/${fileName}`);
 
-      try {
-        await uploadBytes(fileRef, audioBlob);
-        const downloadURL = await getDownloadURL(fileRef);
+        try {
+          await uploadBytes(fileRef, audioBlob);
+          const downloadURL = await getDownloadURL(fileRef);
 
-        const docRef = await addDoc(collection(db, "recordings"), {
-          url: downloadURL,
-          name: `Recording ${recordings.length + 1}`,
-          timestamp: timestamp,
-          fileName: fileName,
-          userId: auth.currentUser.uid
-        });
-
-        setRecordings(prev => [
-          {
-            id: docRef.id,
+          const newRecording = {
             url: downloadURL,
-            name: `Recording ${prev.length + 1}`,
+            name: `Recording ${recordings.length + 1}`,
             timestamp: timestamp,
-            fileName: fileName
-          },
-          ...prev,
-        ]);
-      } catch (error) {
-        console.error("Error uploading file:", error);
-        if (error.code === 'storage/unauthorized') {
-          setError("CORS error: Unable to upload file. Please check your Firebase Storage rules.");
-        } else {
+            fileName: fileName,
+            userId: auth.currentUser.uid,
+            order: recordings.length
+          };
+
+          const docRef = await addDoc(collection(db, "recordings"), newRecording);
+          setRecordings(prev => [{ id: docRef.id, ...newRecording }, ...prev]);
+        } catch (error) {
+          console.error("Error uploading file:", error);
           setError("Failed to upload recording. Please try again.");
         }
-      }
-    });
+      });
 
-    setIsRecording(true);
-  } catch (err) {
-    console.error("Error accessing the microphone:", err);
-    setError("Failed to access microphone. Please check your permissions.");
-  }
-};
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Error accessing the microphone:", err);
+      setError("Failed to access microphone. Please check your permissions.");
+    }
+  };
 
   const stopRecording = () => {
     if (mediaRecorder.current) {
       mediaRecorder.current.stop();
       setIsRecording(false);
+    }
+  };
+
+  const updateRecording = async (id, updatedFields) => {
+    try {
+      const recordingRef = doc(db, "recordings", id);
+      await updateDoc(recordingRef, updatedFields);
+      setRecordings(prevRecordings => 
+        prevRecordings.map(rec => 
+          rec.id === id ? { ...rec, ...updatedFields } : rec
+        )
+      );
+    } catch (error) {
+      console.error("Error updating recording:", error);
+      setError("Failed to update recording. Please try again.");
     }
   };
 
@@ -143,87 +147,61 @@ const startRecording = async () => {
   };
 
   const onDragEnd = async (result) => {
-  if (!result.destination) {
-    return;
-  }
+    if (!result.destination) {
+      return;
+    }
 
-  const items = Array.from(recordings);
-  const [reorderedItem] = items.splice(result.source.index, 1);
-  items.splice(result.destination.index, 0, reorderedItem);
+    const items = Array.from(recordings);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
 
-  setRecordings(items);
+    const updatedRecordings = items.map((item, index) => ({
+      ...item,
+      order: index
+    }));
 
-  // Update the order in Firestore
-  for (let i = 0; i < items.length; i++) {
-    await updateRecording(items[i].id, { order: i });
-  }
-};
+    setRecordings(updatedRecordings);
+
+    // Update the order in Firestore
+    for (let recording of updatedRecordings) {
+      await updateRecording(recording.id, { order: recording.order });
+    }
+  };
 
   const RecordingItem = ({ recording, index, updateRecording, deleteRecording }) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [name, setName] = useState(recording.name);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [name, setName] = useState(recording.name);
 
-  const handleNameChange = async (newName) => {
-    if (newName.trim() === recording.name) return;
-    await updateRecording(recording.id, { name: newName.trim() });
-  };
-    
-  const updateRecordingName = async (newName) => {
-    if (newName.trim() === recording.name) return; // No change, don't update
+    const handleNameChange = async (newName) => {
+      if (newName.trim() === recording.name) return;
+      await updateRecording(recording.id, { name: newName.trim() });
+    };
 
-    try {
-      const recordingRef = doc(db, "recordings", recording.id);
-      await updateDoc(recordingRef, { name: newName.trim() });
-      console.log("Recording name updated successfully");
-    } catch (error) {
-      console.error("Error updating recording name:", error);
-      setError("Failed to update recording name. Please try again.");
-      // Revert the name if update fails
-      setName(recording.name);
-    }
-  };
-
-     const updateRecording = async (id, updatedFields) => {
-    try {
-      const recordingRef = doc(db, "recordings", id);
-      await updateDoc(recordingRef, updatedFields);
-      setRecordings(prevRecordings => 
-        prevRecordings.map(rec => 
-          rec.id === id ? { ...rec, ...updatedFields } : rec
-        )
-      );
-    } catch (error) {
-      console.error("Error updating recording:", error);
-      setError("Failed to update recording. Please try again.");
-    }
-  };
-
-
-     return (
-    <Draggable draggableId={recording.id} index={index}>
-      {(provided) => (
-        <div
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          className="flex items-center bg-gray-100 p-3 rounded-lg mb-2"
-        >
-          <div {...provided.dragHandleProps} className="mr-2 text-gray-500">
-            <FaGripVertical />
-          </div>
-          <div className="flex-shrink-0 mr-4 text-sm text-gray-600">
-            <div>{new Date(recording.timestamp).toLocaleDateString()}</div>
-            <div>{new Date(recording.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-          </div>
-          <div className="flex items-center flex-grow mr-4 justify-evenly">
-            <audio src={recording.url} controls className="mr-4" />
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onBlur={() => updateRecordingName(name)}
-              className="bg-transparent border-b border-gray-400 focus:outline-none focus:border-blue-500"
-            />
-          </div>
+    return (
+      <Draggable draggableId={recording.id} index={index}>
+        {(provided) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            className="flex items-center bg-gray-100 p-3 rounded-lg mb-2"
+          >
+            <div {...provided.dragHandleProps} className="mr-2 text-gray-500">
+              <FaGripVertical />
+            </div>
+            <div className="flex-shrink-0 mr-4 text-sm text-gray-600">
+              <div>{new Date(recording.timestamp).toLocaleDateString()}</div>
+              <div>{new Date(recording.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+            </div>
+            <div className="flex items-center flex-grow mr-4 justify-evenly">
+              <audio src={recording.url} controls className="mr-4" />
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={() => handleNameChange(name)}
+                className="bg-transparent border-b border-gray-400 focus:outline-none focus:border-blue-500"
+              />
+            </div>
             <div className="relative">
               <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 hover:text-gray-800">
                 <FaEllipsisV />
@@ -248,7 +226,7 @@ const startRecording = async () => {
     );
   };
 
-if (loading) {
+  if (loading) {
     return <div>Loading...</div>;
   }
 
@@ -277,7 +255,13 @@ if (loading) {
               {(provided) => (
                 <div {...provided.droppableProps} ref={provided.innerRef} className="mt-4 space-y-2">
                   {recordings.map((recording, index) => (
-                    <RecordingItem key={recording.id} recording={recording} index={index} />
+                    <RecordingItem 
+                      key={recording.id} 
+                      recording={recording} 
+                      index={index} 
+                      updateRecording={updateRecording}
+                      deleteRecording={deleteRecording}
+                    />
                   ))}
                   {provided.placeholder}
                 </div>
