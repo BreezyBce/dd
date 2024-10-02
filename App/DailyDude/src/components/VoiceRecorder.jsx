@@ -155,36 +155,49 @@ const startRecording = async () => {
   };
 
   const RecordingItem = ({ recording, index }) => {
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [name, setName] = useState(recording.name);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [name, setName] = useState(recording.name);
 
-    return (
-      <Draggable draggableId={recording.id} index={index}>
-        {(provided) => (
-          <div
-            ref={provided.innerRef}
-            {...provided.draggableProps}
-            className="flex items-center bg-gray-100 p-3 rounded-lg mb-2"
-          >
-            <div {...provided.dragHandleProps} className="mr-2 text-gray-500">
-              <FaGripVertical />
-            </div>
-            <div className="flex-shrink-0 mr-4 text-sm text-gray-600">
-              <div>{new Date(recording.timestamp).toLocaleDateString()}</div>
-              <div>{new Date(recording.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-            </div>
-            <div className="flex items-center flex-grow mr-4 justify-evenly">
-              <audio src={recording.url} controls className="mr-4" />
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onBlur={() => {
-                  // Update name in Firestore here if needed
-                }}
-                className="bg-transparent border-b border-gray-400 focus:outline-none focus:border-blue-500"
-              />
-            </div>
+  const updateRecordingName = async (newName) => {
+    if (newName.trim() === recording.name) return; // No change, don't update
+
+    try {
+      const recordingRef = doc(db, "recordings", recording.id);
+      await updateDoc(recordingRef, { name: newName.trim() });
+      console.log("Recording name updated successfully");
+    } catch (error) {
+      console.error("Error updating recording name:", error);
+      setError("Failed to update recording name. Please try again.");
+      // Revert the name if update fails
+      setName(recording.name);
+    }
+  };
+
+     return (
+    <Draggable draggableId={recording.id} index={index}>
+      {(provided) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          className="flex items-center bg-gray-100 p-3 rounded-lg mb-2"
+        >
+          <div {...provided.dragHandleProps} className="mr-2 text-gray-500">
+            <FaGripVertical />
+          </div>
+          <div className="flex-shrink-0 mr-4 text-sm text-gray-600">
+            <div>{new Date(recording.timestamp).toLocaleDateString()}</div>
+            <div>{new Date(recording.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+          <div className="flex items-center flex-grow mr-4 justify-evenly">
+            <audio src={recording.url} controls className="mr-4" />
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={() => updateRecordingName(name)}
+              className="bg-transparent border-b border-gray-400 focus:outline-none focus:border-blue-500"
+            />
+          </div>
             <div className="relative">
               <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 hover:text-gray-800">
                 <FaEllipsisV />
