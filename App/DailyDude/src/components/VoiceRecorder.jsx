@@ -11,6 +11,8 @@ const VoiceRecorder = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const mediaRecorder = useRef(null);
+  const [transcribedText, setTranscribedText] = useState('');
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -176,6 +178,30 @@ const VoiceRecorder = () => {
       if (newName.trim() === recording.name) return;
       await updateRecording(recording.id, { name: newName.trim() });
     };
+
+    const startTranscription = (audioBlob) => {
+    setIsTranscribing(true);
+    const recognition = new window.webkitSpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setTranscribedText(transcript);
+      setIsTranscribing(false);
+    };
+
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error', event.error);
+      setIsTranscribing(false);
+    };
+
+    // Convert blob to audio element
+    const audio = new Audio(URL.createObjectURL(audioBlob));
+    audio.play();
+    recognition.start();
+  };
 
     return (
       <Draggable draggableId={recording.id} index={index}>
