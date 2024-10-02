@@ -131,20 +131,42 @@ const VoiceRecorder = () => {
   return new Promise((resolve, reject) => {
     setIsTranscribing(true);
     let fullTranscript = '';
+    let currentSentence = '';
+    let lastPauseTime = Date.now();
 
     try {
       const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
       recognition.lang = 'en-US';
       recognition.continuous = true;
-      recognition.interimResults = false;
+      recognition.interimResults = true;
 
       recognition.onresult = (event) => {
         for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            fullTranscript += event.results[i][0].transcript + ' ';
+            currentSentence += transcript + ' ';
+            const now = Date.now();
+            if (now - lastPauseTime > 700) { // Pause threshold for period
+              fullTranscript += formatSentence(currentSentence) + '. ';
+              currentSentence = '';
+            } else if (now - lastPauseTime > 300) { // Pause threshold for comma
+              fullTranscript += formatSentence(currentSentence) + ', ';
+              currentSentence = '';
+            }
+            lastPauseTime = now;
+          } else {
+            setTranscribedText(fullTranscript + formatSentence(currentSentence + transcript));
           }
         }
+      };
+
+      recognition.onend = () => {
+        if (currentSentence) {
+          fullTranscript += formatSentence(currentSentence) + '.';
+        }
+        setIsTranscribing(false);
         setTranscribedText(fullTranscript.trim());
+        resolve(fullTranscript.trim());
       };
 
       recognition.onerror = (event) => {
@@ -152,11 +174,6 @@ const VoiceRecorder = () => {
         setError('Failed to transcribe audio. Please try again.');
         setIsTranscribing(false);
         reject(event.error);
-      };
-
-      recognition.onend = () => {
-        setIsTranscribing(false);
-        resolve(fullTranscript.trim());
       };
 
       // Convert blob to audio element and play
@@ -175,6 +192,28 @@ const VoiceRecorder = () => {
       reject(error);
     }
   });
+};
+
+const formatSentence = (sentence) => {
+  sentence = sentence.trim();
+  sentence = sentence.charAt(0).toUpperCase() + sentence.slice(1);
+  
+  // Common abbreviations to ignore for capitalization
+  const abbreviations = ['mr', 'mrs', 'ms', 'dr', 'prof', 'etc', 'e.g', 'i.e'];
+  
+  // Capitalize proper nouns and the first word after a period
+  sentence = sentence.replace(/(?<=\. |^)[a-z]/g, (match) => {
+    const wordStart = sentence.lastIndexOf(' ', sentence.indexOf(match)) + 1;
+    const word = sentence.slice(wordStart, sentence.indexOf(' ', wordStart) !== -1 ? sentence.indexOf(' ', wordStart) : undefined).toLowerCase();
+    return abbreviations.includes(word) ? match : match.toUpperCase();
+  });
+
+  // Add question mark for questions
+  if (/\b(who|what|when|where|why|how|is|are|am|do|does|did|can|could|would|should|has|have)\b/i.test(sentence) && !sentence.endsWith('?')) {
+    sentence += '?';
+  }
+
+  return sentence;
 };
 
   const updateRecording = async (id, updatedFields) => {
