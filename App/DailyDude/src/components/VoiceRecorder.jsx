@@ -133,7 +133,7 @@ const VoiceRecorder = () => {
   }
 };
 
-  const startTranscription = (audioBlob, language = 'en-US') => {
+ const startTranscription = (audioBlob, language = 'en-US') => {
   return new Promise((resolve, reject) => {
     setIsTranscribing(true);
     let fullTranscript = '';
@@ -211,28 +211,6 @@ const isQuestion = (sentence, language) => {
   };
 
   return questionWords[language].test(sentence.trim());
-};
-
-const formatSentence = (sentence) => {
-  sentence = sentence.trim();
-  sentence = sentence.charAt(0).toUpperCase() + sentence.slice(1);
-  
-  // Common abbreviations to ignore for capitalization
-  const abbreviations = ['mr', 'mrs', 'ms', 'dr', 'prof', 'etc', 'e.g', 'i.e'];
-  
-  // Capitalize proper nouns and the first word after a period
-  sentence = sentence.replace(/(?<=\. |^)[a-z]/g, (match) => {
-    const wordStart = sentence.lastIndexOf(' ', sentence.indexOf(match)) + 1;
-    const word = sentence.slice(wordStart, sentence.indexOf(' ', wordStart) !== -1 ? sentence.indexOf(' ', wordStart) : undefined).toLowerCase();
-    return abbreviations.includes(word) ? match : match.toUpperCase();
-  });
-
-  // Add question mark for questions
-  if (/\b(who|what|when|where|why|how|is|are|am|do|does|did|can|could|would|should|has|have)\b/i.test(sentence) && !sentence.endsWith('?')) {
-    sentence += '?';
-  }
-
-  return sentence;
 };
 
   const updateRecording = async (id, updatedFields) => {
