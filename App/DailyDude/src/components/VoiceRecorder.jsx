@@ -1,22 +1,35 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FaEllipsisV, FaDownload, FaTrash, FaShare, FaGripVertical } from 'react-icons/fa';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { storage, db } from '../firebase'; // Updated import path
+import { storage, db, auth } from '../firebase';
 
 const VoiceRecorder = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordings, setRecordings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const mediaRecorder = useRef(null);
 
   useEffect(() => {
-    loadRecordingsFromFirestore();
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        loadRecordingsFromFirestore(user.uid);
+      } else {
+        setRecordings([]);
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const loadRecordingsFromFirestore = async () => {
+  const loadRecordingsFromFirestore = async (userId) => {
     try {
-      const querySnapshot = await getDocs(collection(db, "recordings"));
+      setLoading(true);
+      const q = query(collection(db, "recordings"), where("userId", "==", userId));
+      const querySnapshot = await getDocs(q);
       const loadedRecordings = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -24,10 +37,18 @@ const VoiceRecorder = () => {
       setRecordings(loadedRecordings.sort((a, b) => b.timestamp - a.timestamp));
     } catch (error) {
       console.error("Error loading recordings:", error);
+      setError("Failed to load recordings. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   const startRecording = async () => {
+    if (!auth.currentUser) {
+      setError("Please log in to record audio.");
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder.current = new MediaRecorder(stream);
@@ -42,7 +63,7 @@ const VoiceRecorder = () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/mp4' });
         const timestamp = Date.now();
         const fileName = `recording_${timestamp}.mp4`;
-        const fileRef = ref(storage, `recordings/${fileName}`);
+        const fileRef = ref(storage, `recordings/${auth.currentUser.uid}/${fileName}`);
 
         try {
           await uploadBytes(fileRef, audioBlob);
@@ -52,7 +73,8 @@ const VoiceRecorder = () => {
             url: downloadURL,
             name: `Recording ${recordings.length + 1}`,
             timestamp: timestamp,
-            fileName: fileName
+            fileName: fileName,
+            userId: auth.currentUser.uid
           });
 
           setRecordings(prev => [
@@ -67,28 +89,38 @@ const VoiceRecorder = () => {
           ]);
         } catch (error) {
           console.error("Error uploading file:", error);
+          setError("Failed to upload recording. Please try again.");
         }
       });
 
       setIsRecording(true);
     } catch (err) {
       console.error("Error accessing the microphone:", err);
+      setError("Failed to access microphone. Please check your permissions.");
     }
   };
 
   const stopRecording = () => {
-    mediaRecorder.current.stop();
-    setIsRecording(false);
+    if (mediaRecorder.current) {
+      mediaRecorder.current.stop();
+      setIsRecording(false);
+    }
   };
 
   const deleteRecording = async (id, fileName) => {
+    if (!auth.currentUser) {
+      setError("Please log in to delete recordings.");
+      return;
+    }
+
     try {
       await deleteDoc(doc(db, "recordings", id));
-      const fileRef = ref(storage, `recordings/${fileName}`);
+      const fileRef = ref(storage, `recordings/${auth.currentUser.uid}/${fileName}`);
       await deleteObject(fileRef);
       setRecordings(prev => prev.filter(recording => recording.id !== id));
     } catch (error) {
       console.error("Error deleting recording:", error);
+      setError("Failed to delete recording. Please try again.");
     }
   };
 
@@ -173,34 +205,48 @@ const VoiceRecorder = () => {
     );
   };
 
-return (
-  <div className="bg-white p-6 rounded-lg shadow-md dark:bg-dark-background-2 text-gray-800 dark:text-gray-400">
-    <h2 className="text-2xl font-bold mb-4">Voice Recorder</h2>
-    <div className="flex justify-center mb-4">
-      {!isRecording ? (
-        <button onClick={startRecording} className="bg-customorange-500 text-white px-4 py-2 rounded hover:bg-customorange-400 transition duration-300">
-          Start Recording
-        </button>
+if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500">{error}</div>;
+  }
+
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-md dark:bg-dark-background-2 text-gray-800 dark:text-gray-400">
+      <h2 className="text-2xl font-bold mb-4">Voice Recorder</h2>
+      {auth.currentUser ? (
+        <>
+          <div className="flex justify-center mb-4">
+            {!isRecording ? (
+              <button onClick={startRecording} className="bg-customorange-500 text-white px-4 py-2 rounded hover:bg-customorange-400 transition duration-300">
+                Start Recording
+              </button>
+            ) : (
+              <button onClick={stopRecording} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition duration-300">
+                Stop Recording
+              </button>
+            )}
+          </div>
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="recordings">
+              {(provided) => (
+                <div {...provided.droppableProps} ref={provided.innerRef} className="mt-4 space-y-2">
+                  {recordings.map((recording, index) => (
+                    <RecordingItem key={recording.id} recording={recording} index={index} />
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+        </>
       ) : (
-        <button onClick={stopRecording} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition duration-300">
-          Stop Recording
-        </button>
+        <div>Please log in to use the Voice Recorder.</div>
       )}
     </div>
-    <DragDropContext onDragEnd={onDragEnd}>
-      <Droppable droppableId="recordings">
-        {(provided) => (
-          <div {...provided.droppableProps} ref={provided.innerRef} className="mt-4 space-y-2">
-            {recordings.map((recording, index) => (
-              <RecordingItem key={recording.url} recording={recording} index={index} />
-            ))}
-            {provided.placeholder}
-          </div>
-        )}
-      </Droppable>
-    </DragDropContext>
-  </div>
-);
+  );
 };
 
 export default VoiceRecorder;
