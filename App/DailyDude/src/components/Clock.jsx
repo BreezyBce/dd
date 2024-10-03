@@ -4,7 +4,7 @@ import { FaPlay, FaPause, FaStop, FaPlus, FaTrash } from 'react-icons/fa';
 const Clock = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [alarms, setAlarms] = useState([]);
-  const [newAlarm, setNewAlarm] = useState({ time: '', label: '', tone: 'default' });
+  const [newAlarm, setNewAlarm] = useState({ time: '', label: '', sound: 'Alarm.wav' });
   const [activeAlarms, setActiveAlarms] = useState([]);
   const [stopwatchTime, setStopwatchTime] = useState(0);
   const [isStopwatchRunning, setIsStopwatchRunning] = useState(false);
@@ -83,7 +83,6 @@ const Clock = () => {
   }, [alarmSound]);
 
   useEffect(() => {
-    // Load alarm sounds
     const loadAudio = (file) => {
       return new Promise((resolve, reject) => {
         const audio = new Audio(`${process.env.PUBLIC_URL}/sound/${file}`);
@@ -102,7 +101,7 @@ const Clock = () => {
       .catch(error => console.error('Failed to load timer sound:', error));
   }, []);
 
-  const addAlarm = () => {
+ const addAlarm = () => {
     if (newAlarm.time) {
       setAlarms([...alarms, { ...newAlarm, id: Date.now() }]);
       setNewAlarm({ time: '', label: '', sound: 'Alarm.wav' });
@@ -170,7 +169,7 @@ const Clock = () => {
     setTimerTime(totalSeconds);
   };
 
-  const playAlarmSound = (soundFile) => {
+ const playAlarmSound = (soundFile) => {
     if (alarmSound) {
       alarmSound.src = `${process.env.PUBLIC_URL}/sound/${soundFile}`;
       alarmSound.play().catch(error => console.error('Failed to play alarm sound:', error));
@@ -182,18 +181,19 @@ const Clock = () => {
     }
   };
 
-  
 
-  const stopAlarmSound = () => {
-    alarmSound.pause();
-    alarmSound.currentTime = 0;
+ const stopAlarmSound = () => {
+    if (alarmSound) {
+      alarmSound.pause();
+      alarmSound.currentTime = 0;
+    }
     if (alarmIntervalRef.current) {
       clearInterval(alarmIntervalRef.current);
       alarmIntervalRef.current = null;
     }
   };
 
- const playTimerSound = () => {
+const playTimerSound = () => {
     if (timerSound) {
       timerSound.play().catch(error => console.error('Failed to play timer sound:', error));
     }
@@ -264,7 +264,7 @@ const Clock = () => {
           <ul className="space-y-2">
             {alarms.map(alarm => (
               <li key={alarm.id} className="flex flex-col md:flex-row items-center justify-between p-2 bg-gray-100 rounded">
-                <span className="mb-2 md:mb-0">{formatTime12Hour(alarm.time)} - {alarm.label} ({alarm.sound})</span>
+                <span className="mb-2 md:mb-0">{alarm.time} - {alarm.label} ({alarm.sound})</span>
                 <div className="space-x-2">
                   <button onClick={() => deleteAlarm(alarm.id)} className="text-red-500"><FaTrash /></button>
                   {activeAlarms.includes(alarm.id) && (
