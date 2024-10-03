@@ -13,6 +13,9 @@ const Clock = () => {
   const [timerInput, setTimerInput] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [timerPresets] = useState([60, 300, 600, 1800, 3600]); // 1min, 5min, 10min, 30min, 1hour
   const [activeTab, setActiveTab] = useState('clock');
+  const [alarmSound] = useState(new Audio('/path/to/your/alarm-sound.mp3')); // Add your alarm sound file
+  const [timerSound] = useState(new Audio('/path/to/your/timer-sound.mp3')); // Add your timer sound file
+
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -56,7 +59,13 @@ const Clock = () => {
     return () => clearInterval(interval);
   }, [isTimerRunning, timerTime]);
 
-  const addAlarm = () => {
+  useEffect(() => {
+    if (timerTime === 0 && isTimerRunning) {
+      timerSound.play();
+    }
+  }, [timerTime, isTimerRunning, timerSound]);
+
+ const addAlarm = () => {
     if (newAlarm.time) {
       setAlarms([...alarms, { ...newAlarm, id: Date.now() }]);
       setNewAlarm({ time: '', label: '', tone: 'default' });
@@ -65,6 +74,9 @@ const Clock = () => {
 
   const deleteAlarm = (id) => {
     setAlarms(alarms.filter(alarm => alarm.id !== id));
+    setActiveAlarms(activeAlarms.filter(alarmId => alarmId !== id));
+    alarmSound.pause();
+    alarmSound.currentTime = 0;
   };
 
   const snoozeAlarm = (id) => {
@@ -72,16 +84,31 @@ const Clock = () => {
     const alarm = alarms.find(a => a.id === id);
     const snoozeTime = new Date();
     snoozeTime.setMinutes(snoozeTime.getMinutes() + 5);
-    const newAlarm = {
+    const updatedAlarm = {
       ...alarm,
-      id: Date.now(),
       time: `${snoozeTime.getHours().toString().padStart(2, '0')}:${snoozeTime.getMinutes().toString().padStart(2, '0')}`
     };
-    setAlarms([...alarms, newAlarm]);
+    setAlarms(alarms.map(a => a.id === id ? updatedAlarm : a));
+    alarmSound.pause();
+    alarmSound.currentTime = 0;
   };
 
   const dismissAlarm = (id) => {
     setActiveAlarms(activeAlarms.filter(alarmId => alarmId !== id));
+    alarmSound.pause();
+    alarmSound.currentTime = 0;
+  };
+
+  const playAlarmSound = (tone) => {
+    alarmSound.play();
+  };
+
+  const formatTime12Hour = (time) => {
+    const [hours, minutes] = time.split(':');
+    const parsedHours = parseInt(hours, 10);
+    const ampm = parsedHours >= 12 ? 'PM' : 'AM';
+    const formattedHours = parsedHours % 12 || 12;
+    return `${formattedHours}:${minutes} ${ampm}`;
   };
 
   const startStopwatch = () => setIsStopwatchRunning(true);
@@ -153,19 +180,19 @@ const Clock = () => {
       {activeTab === 'alarm' && (
         <div>
           <h2 className="text-2xl font-bold mb-4">Alarms</h2>
-          <div className="mb-4">
+          <div className="mb-4 flex">
             <input
               type="time"
               value={newAlarm.time}
               onChange={(e) => setNewAlarm({...newAlarm, time: e.target.value})}
-              className="p-2 border rounded mr-2 text-gray-800"
+              className="p-2 border rounded mr-2 text-gray-800 flex-grow"
             />
             <input
               type="text"
               placeholder="Alarm label"
               value={newAlarm.label}
               onChange={(e) => setNewAlarm({...newAlarm, label: e.target.value})}
-              className="p-2 border rounded mr-2"
+              className="p-2 border rounded mr-2 flex-grow"
             />
             <select
               value={newAlarm.tone}
@@ -181,7 +208,7 @@ const Clock = () => {
           <ul>
             {alarms.map(alarm => (
               <li key={alarm.id} className="flex items-center justify-between mb-2 p-2 bg-gray-100 rounded">
-                <span>{alarm.time} - {alarm.label}</span>
+                <span>{formatTime12Hour(alarm.time)} - {alarm.label}</span>
                 <div>
                   <button onClick={() => deleteAlarm(alarm.id)} className="text-red-500 mr-2"><FaTrash /></button>
                   {activeAlarms.includes(alarm.id) && (
