@@ -13,8 +13,8 @@ const Clock = () => {
   const [timerInput, setTimerInput] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [timerPresets] = useState([60, 300, 600, 1800, 3600]); // 1min, 5min, 10min, 30min, 1hour
   const [activeTab, setActiveTab] = useState('clock');
-  const [alarmSound] = useState(new Audio('./sound/Alarm.wav')); // Add your alarm sound file
-  const [timerSound] = useState(new Audio('./sound/Beep.wav')); // Add your timer sound file
+  const [alarmSound] = useState(new Audio('/sound/Alarm.wav')); // Add your alarm sound file
+  const [timerSound] = useState(new Audio('/sound/Beep.wav')); // Add your timer sound file
   const alarmIntervalRef = useRef(null);
 
   const alarmSounds = [
