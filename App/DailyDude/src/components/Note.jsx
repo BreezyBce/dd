@@ -210,7 +210,7 @@ const Note = () => {
     }
   };
 
-const toggleNoteExpansion = (id) => {
+ const toggleNoteExpansion = (id) => {
     setExpandedNotes(prev => ({
       ...prev,
       [id]: !prev[id]
@@ -299,20 +299,21 @@ const toggleNoteExpansion = (id) => {
           <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
         </div>
       </div>
-      <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="notes">
-          {(provided) => (
-            <div
-              {...provided.droppableProps}
-              ref={provided.innerRef}
-              className="grid grid-cols-1 md:grid-cols-2 gap-4"
-            >
-              {filteredNotes.map((note, index) => {
-                const backgroundColor = categories[note.category] || '#ffffff';
-                const textColor = getContrastColor(backgroundColor);
-                const isExpanded = expandedNotes[note.id];
-                const shouldCollapse = note.content.length > 300;
-                return (
+      return (
+    <DragDropContext onDragEnd={onDragEnd}>
+      <Droppable droppableId="notes">
+        {(provided) => (
+          <div
+            {...provided.droppableProps}
+            ref={provided.innerRef}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          >
+            {filteredNotes.map((note, index) => {
+              const backgroundColor = categories[note.category] || '#ffffff';
+              const textColor = getContrastColor(backgroundColor);
+              const isExpanded = expandedNotes[note.id];
+              const shouldTruncate = note.content.length > 100;
+              return (
                 <Draggable key={note.id} draggableId={note.id} index={index}>
                   {(provided) => (
                     <div
