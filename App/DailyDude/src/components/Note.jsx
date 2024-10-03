@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaTimes, FaChevronDown, FaChevronUp } from 'react-icons/fa';
-import { collection, addDoc, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, deleteDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { updateDoc } from 'firebase/firestore';
@@ -23,28 +23,19 @@ const Note = () => {
   const [expandedNotes, setExpandedNotes] = useState({});
   const [noteOrder, setNoteOrder] = useState([]);
 
-  useEffect(() => {
+   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         console.log("User is signed in:", user.uid);
         fetchNotes();
       } else {
         console.log("No user signed in");
+        setNotes([]);
       }
     });
 
     return () => unsubscribe();
   }, []);
-
-  useEffect(() => {
-    fetchNotes();
-    const savedCategories = JSON.parse(localStorage.getItem('allInOneAppCategories')) || {};
-    setCategories(savedCategories);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('allInOneAppCategories', JSON.stringify(categories));
-  }, [categories]);
 
   const fetchNotes = async () => {
     try {
@@ -57,8 +48,9 @@ const Note = () => {
         completed: doc.data().completed || false
       }));
       console.log("Fetched notes:", fetchedNotes);
+      // Sort notes by their order field
+      fetchedNotes.sort((a, b) => a.order - b.order);
       setNotes(fetchedNotes);
-      setNoteOrder(fetchedNotes.map(note => note.id));
     } catch (error) {
       console.error("Error fetching notes: ", error);
     }
@@ -70,10 +62,11 @@ const Note = () => {
       const docRef = await addDoc(collection(db, 'notes'), {
         ...noteToAdd,
         userId: auth.currentUser.uid,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        order: notes.length // Set the order to the current number of notes
       });
       console.log("Note added with ID: ", docRef.id);
-      fetchNotes();
+      fetchNotes(); // Refresh notes after adding
     } catch (error) {
       console.error("Error adding note: ", error);
     }
@@ -222,16 +215,33 @@ const Note = () => {
     return text.substr(0, maxLength) + '...';
   };
 
-  const onDragEnd = (result) => {
-    if (!result.destination) {
-      return;
-    }
+  const onDragEnd = async (result) => {
+    if (!result.destination) return;
 
-    const items = Array.from(noteOrder);
+    const items = Array.from(notes);
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
-    setNoteOrder(items);
+    // Update the order of items
+    const updatedItems = items.map((item, index) => ({
+      ...item,
+      order: index
+    }));
+
+    setNotes(updatedItems);
+
+    // Update the order in Firestore
+    try {
+      const batch = writeBatch(db);
+      updatedItems.forEach((item) => {
+        const noteRef = doc(db, 'notes', item.id);
+        batch.update(noteRef, { order: item.order });
+      });
+      await batch.commit();
+      console.log("Note order updated in database");
+    } catch (error) {
+      console.error("Error updating note order:", error);
+    }
   };
 
   const filteredNotes = noteOrder
@@ -308,7 +318,7 @@ const Note = () => {
             ref={provided.innerRef}
             className="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
-            {filteredNotes.map((note, index) => {
+            {notes.map((note, index) => {
               const backgroundColor = categories[note.category] || '#ffffff';
               const textColor = getContrastColor(backgroundColor);
               const isExpanded = expandedNotes[note.id];
