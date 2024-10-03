@@ -200,34 +200,34 @@ const Clock = () => {
       {activeTab === 'alarm' && (
         <div>
           <h2 className="text-2xl font-bold mb-4">Alarms</h2>
-          <div className="mb-4 flex">
+          <div className="mb-4 flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2">
             <input
               type="time"
               value={newAlarm.time}
               onChange={(e) => setNewAlarm({...newAlarm, time: e.target.value})}
-              className="p-2 border rounded mr-2 text-gray-800 flex-grow"
+              className="p-2 border rounded text-gray-800 w-full md:w-auto"
             />
             <input
               type="text"
               placeholder="Alarm label"
               value={newAlarm.label}
               onChange={(e) => setNewAlarm({...newAlarm, label: e.target.value})}
-              className="p-2 border rounded mr-2 flex-grow"
+              className="p-2 border rounded w-full md:w-auto"
             />
             <select
               value={newAlarm.tone}
               onChange={(e) => setNewAlarm({...newAlarm, tone: e.target.value})}
-              className="p-2 border rounded mr-2 text-gray-800"
+              className="p-2 border rounded text-gray-800 w-full md:w-auto"
             >
               <option value="default">Default Tone</option>
               <option value="gentle">Gentle Tone</option>
               <option value="loud">Loud Tone</option>
             </select>
-            <button onClick={addAlarm} className="bg-customorange-500 text-white px-4 py-2 rounded"><FaPlus /></button>
+            <button onClick={addAlarm} className="bg-customorange-500 text-white px-4 py-2 rounded w-full md:w-auto"><FaPlus /></button>
           </div>
           <ul>
             {alarms.map(alarm => (
-              <li key={alarm.id} className="flex items-center justify-between mb-2 p-2 bg-gray-100 rounded">
+              <li key={alarm.id} className="flex flex-col md:flex-row items-center justify-between p-2 bg-gray-100 rounded">
                 <span>{formatTime12Hour(alarm.time)} - {alarm.label}</span>
                 <div>
                   <button onClick={() => deleteAlarm(alarm.id)} className="text-red-500 mr-2"><FaTrash /></button>
