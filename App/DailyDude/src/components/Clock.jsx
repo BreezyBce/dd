@@ -18,11 +18,11 @@ const Clock = () => {
   const alarmIntervalRef = useRef(null);
 
   const alarmSounds = [
-    { name: 'Alarm', file: './sound/Alarm.wav' },
-    { name: 'Beep', file: './sound/Beep.wav' },
-    { name: 'Rooster', file: './sound/Rooster.wav' },
-    { name: 'Morning', file: './sound/Morning.wav' },
-    { name: 'Retro', file: './sound/Retro.wav' },
+    { name: 'Alarm', file: 'Alarm.wav' },
+    { name: 'Beep', file: 'Beep.wav' },
+    { name: 'Rooster', file: 'Rooster.wav' },
+    { name: 'Morning', file: 'Morning.wav' },
+    { name: 'Retro', file: 'Retro.wav' },
   ];
 
 
@@ -81,6 +81,26 @@ const Clock = () => {
       });
     };
   }, [alarmSound]);
+
+  useEffect(() => {
+    // Load alarm sounds
+    const loadAudio = (file) => {
+      return new Promise((resolve, reject) => {
+        const audio = new Audio(`${process.env.PUBLIC_URL}/sound/${file}`);
+        audio.addEventListener('canplaythrough', () => resolve(audio), false);
+        audio.addEventListener('error', (e) => reject(e), false);
+        audio.load();
+      });
+    };
+
+    loadAudio('Alarm.wav')
+      .then(audio => setAlarmSound(audio))
+      .catch(error => console.error('Failed to load alarm sound:', error));
+
+    loadAudio('Beep.wav')
+      .then(audio => setTimerSound(audio))
+      .catch(error => console.error('Failed to load timer sound:', error));
+  }, []);
 
   const addAlarm = () => {
     if (newAlarm.time) {
@@ -150,15 +170,19 @@ const Clock = () => {
     setTimerTime(totalSeconds);
   };
 
-  const playAlarmSound = (sound) => {
-    alarmSound.src = `/sound/${sound}`;
-    alarmSound.play();
-    alarmIntervalRef.current = setInterval(() => {
-      if (alarmSound.paused) {
-        alarmSound.play();
-      }
-    }, 1000);
+  const playAlarmSound = (soundFile) => {
+    if (alarmSound) {
+      alarmSound.src = `${process.env.PUBLIC_URL}/sound/${soundFile}`;
+      alarmSound.play().catch(error => console.error('Failed to play alarm sound:', error));
+      alarmIntervalRef.current = setInterval(() => {
+        if (alarmSound.paused) {
+          alarmSound.play().catch(error => console.error('Failed to replay alarm sound:', error));
+        }
+      }, 1000);
+    }
   };
+
+  
 
   const stopAlarmSound = () => {
     alarmSound.pause();
@@ -169,8 +193,10 @@ const Clock = () => {
     }
   };
 
-  const playTimerSound = () => {
-    timerSound.play();
+ const playTimerSound = () => {
+    if (timerSound) {
+      timerSound.play().catch(error => console.error('Failed to play timer sound:', error));
+    }
   };
 
   const formatTime = (time) => {
