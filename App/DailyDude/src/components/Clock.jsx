@@ -82,23 +82,33 @@ const Clock = () => {
     };
   }, [alarmSound]);
 
-  useEffect(() => {
-    const loadAudio = (file) => {
-      return new Promise((resolve, reject) => {
-        const audio = new Audio(`${process.env.PUBLIC_URL}/sound/${file}`);
-        audio.addEventListener('canplaythrough', () => resolve(audio), false);
-        audio.addEventListener('error', (e) => reject(e), false);
-        audio.load();
-      });
+ useEffect(() => {
+    const loadAudio = async (file) => {
+      try {
+        const response = await fetch(`${process.env.PUBLIC_URL}/sound/${file}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const blob = await response.blob();
+        const audio = new Audio(URL.createObjectURL(blob));
+        return audio;
+      } catch (error) {
+        console.error(`Failed to load audio file ${file}:`, error);
+        return null;
+      }
     };
 
-    loadAudio('Alarm.wav')
-      .then(audio => setAlarmSound(audio))
-      .catch(error => console.error('Failed to load alarm sound:', error));
+   const loadAllSounds = async () => {
+      const loadedSounds = await Promise.all(alarmSounds.map(sound => loadAudio(sound.file)));
+      setAlarmSounds(prevSounds => 
+        prevSounds.map((sound, index) => ({
+          ...sound,
+          audio: loadedSounds[index]
+        }))
+      );
+    };
 
-    loadAudio('Beep.wav')
-      .then(audio => setTimerSound(audio))
-      .catch(error => console.error('Failed to load timer sound:', error));
+    loadAllSounds();
   }, []);
 
  const addAlarm = () => {
@@ -170,14 +180,19 @@ const Clock = () => {
   };
 
  const playAlarmSound = (soundFile) => {
-    if (alarmSound) {
-      alarmSound.src = `${process.env.PUBLIC_URL}/sound/${soundFile}`;
-      alarmSound.play().catch(error => console.error('Failed to play alarm sound:', error));
-      alarmIntervalRef.current = setInterval(() => {
-        if (alarmSound.paused) {
-          alarmSound.play().catch(error => console.error('Failed to replay alarm sound:', error));
+    const sound = alarmSounds.find(s => s.file === soundFile);
+    if (sound && sound.audio) {
+      sound.audio.play().catch(error => {
+        console.error('Failed to play alarm sound:', error);
+        // Fallback to browser's built-in alert sound
+        try {
+          new Audio('data:audio/wav;base64,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</sound.audio.src>')).play();
+        } catch (fallbackError) {
+          console.error('Failed to play fallback sound:', fallbackError);
         }
-      }, 1000);
+      });
+    } else {
+      console.error('Sound not found or not loaded:', soundFile);
     }
   };
 
