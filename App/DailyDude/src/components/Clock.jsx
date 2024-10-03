@@ -151,7 +151,7 @@ const Clock = () => {
   };
 
   const playAlarmSound = (sound) => {
-    alarmSound.src = `/sound/${sound}`;
+    alarmSound.src = `./sound/${sound}`;
     alarmSound.play();
     alarmIntervalRef.current = setInterval(() => {
       if (alarmSound.paused) {
