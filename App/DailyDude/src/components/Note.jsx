@@ -210,11 +210,16 @@ const Note = () => {
     }
   };
 
-  const toggleNoteExpansion = (id) => {
+const toggleNoteExpansion = (id) => {
     setExpandedNotes(prev => ({
       ...prev,
       [id]: !prev[id]
     }));
+  };
+
+   const truncateText = (text, maxLength) => {
+    if (text.length <= maxLength) return text;
+    return text.substr(0, maxLength) + '...';
   };
 
   const onDragEnd = (result) => {
@@ -308,42 +313,41 @@ const Note = () => {
                 const isExpanded = expandedNotes[note.id];
                 const shouldCollapse = note.content.length > 300;
                 return (
-                  <Draggable key={note.id} draggableId={note.id} index={index}>
-                    {(provided) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        className={`p-4 rounded shadow-md ${note.completed ? 'opacity-50' : ''} overflow-hidden`}
-                        style={{
-                          backgroundColor,
-                          color: textColor,
-                          ...provided.draggableProps.style
-                        }}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={note.completed}
-                              onChange={() => toggleNoteCompletion(note.id, note.completed)}
-                              className="mr-2"
-                            />
-                            <h3 className={`font-bold ${note.completed ? 'line-through' : ''}`}>{note.title}</h3>
-                          </div>
-                          <div>
-                            <button onClick={() => handleEditNote(note)} className="mr-2" style={{ color: textColor }}><FaEdit /></button>
-                            <button onClick={() => handleDeleteNote(note.id)} style={{ color: textColor }}><FaTrash /></button>
-                          </div>
+                <Draggable key={note.id} draggableId={note.id} index={index}>
+                  {(provided) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      {...provided.dragHandleProps}
+                      className={`p-4 rounded shadow-md ${note.completed ? 'opacity-50' : ''}`}
+                      style={{
+                        backgroundColor,
+                        color: textColor,
+                        ...provided.draggableProps.style
+                      }}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={note.completed}
+                            onChange={() => toggleNoteCompletion(note.id, note.completed)}
+                            className="mr-2"
+                          />
+                          <h3 className={`font-bold ${note.completed ? 'line-through' : ''}`}>{note.title}</h3>
                         </div>
-                        <div className={`mb-2 ${note.completed ? 'line-through' : ''}`}>
-                          {shouldCollapse && !isExpanded ? (
-                            <p>{note.content.slice(0, 300)}...</p>
-                          ) : (
-                            <p>{note.content}</p>
-                          )}
+                        <div>
+                          <button onClick={() => handleEditNote(note)} className="mr-2" style={{ color: textColor }}><FaEdit /></button>
+                          <button onClick={() => handleDeleteNote(note.id)} style={{ color: textColor }}><FaTrash /></button>
                         </div>
-                        {shouldCollapse && (
+                      </div>
+                      <div className={`mb-2 ${note.completed ? 'line-through' : ''}`}>
+                        <p className="whitespace-pre-wrap break-words">
+                          {shouldTruncate && !isExpanded
+                            ? truncateText(note.content, 100)
+                            : note.content}
+                        </p>
+                        {shouldTruncate && (
                           <button 
                             onClick={() => toggleNoteExpansion(note.id)} 
                             className="text-sm font-medium mt-2"
@@ -356,18 +360,19 @@ const Note = () => {
                             )}
                           </button>
                         )}
-                        <p className="text-sm mt-2" style={{ color: textColor, opacity: 0.7 }}>
-                          {formatDate(note.createdAt)}
-                        </p>
                       </div>
-                    )}
-                  </Draggable>
-                );
-              })}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
+                      <p className="text-sm mt-2" style={{ color: textColor, opacity: 0.7 }}>
+                        {formatDate(note.createdAt)}
+                      </p>
+                    </div>
+                  )}
+                </Draggable>
+              );
+            })}
+            {provided.placeholder}
+          </div>
+        )}
+      </Droppable>
       </DragDropContext>
         {isAddNoteOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
