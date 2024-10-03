@@ -309,7 +309,7 @@ const Note = () => {
           <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
         </div>
       </div>
-     
+       return (
     <DragDropContext onDragEnd={onDragEnd}>
       <Droppable droppableId="notes">
         {(provided) => (
