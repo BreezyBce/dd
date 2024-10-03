@@ -15,6 +15,8 @@ const Clock = () => {
   const [activeTab, setActiveTab] = useState('clock');
   const [alarmSound] = useState(new Audio('./sound/Alarm.wav')); // Add your alarm sound file
   const [timerSound] = useState(new Audio('./sound/Beep.wav')); // Add your timer sound file
+  const alarmIntervalRef = useRef(null);
+
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -57,6 +59,20 @@ const Clock = () => {
     }
     return () => clearInterval(interval);
   }, [isTimerRunning, timerTime]);
+
+  useEffect(() => {
+    alarmSound.addEventListener('ended', () => {
+      alarmSound.currentTime = 0;
+      alarmSound.play();
+    });
+
+    return () => {
+      alarmSound.removeEventListener('ended', () => {
+        alarmSound.currentTime = 0;
+        alarmSound.play();
+      });
+    };
+  }, [alarmSound]);
 
   const addAlarm = () => {
     if (newAlarm.time) {
@@ -128,11 +144,21 @@ const Clock = () => {
 
   const playAlarmSound = () => {
     alarmSound.play();
+    // Start an interval to check if the alarm is still playing
+    alarmIntervalRef.current = setInterval(() => {
+      if (alarmSound.paused) {
+        alarmSound.play();
+      }
+    }, 1000); // Check every second
   };
 
   const stopAlarmSound = () => {
     alarmSound.pause();
     alarmSound.currentTime = 0;
+    if (alarmIntervalRef.current) {
+      clearInterval(alarmIntervalRef.current);
+      alarmIntervalRef.current = null;
+    }
   };
 
   const playTimerSound = () => {
