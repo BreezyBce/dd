@@ -3,7 +3,6 @@ import { FaPlus, FaEdit, FaTrash, FaTimes, FaChevronDown, FaChevronUp } from 're
 import { collection, addDoc, query, where, getDocs, deleteDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { updateDoc } from 'firebase/firestore';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 function formatDate(dateString) {
@@ -21,9 +20,8 @@ const Note = () => {
   const [editingNote, setEditingNote] = useState(null);
   const [newCategory, setNewCategory] = useState('');
   const [expandedNotes, setExpandedNotes] = useState({});
-  const [noteOrder, setNoteOrder] = useState([]);
 
-   useEffect(() => {
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         console.log("User is signed in:", user.uid);
@@ -37,6 +35,16 @@ const Note = () => {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    fetchNotes();
+    const savedCategories = JSON.parse(localStorage.getItem('allInOneAppCategories')) || {};
+    setCategories(savedCategories);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('allInOneAppCategories', JSON.stringify(categories));
+  }, [categories]);
+
   const fetchNotes = async () => {
     try {
       console.log("Fetching notes...");
@@ -48,8 +56,7 @@ const Note = () => {
         completed: doc.data().completed || false
       }));
       console.log("Fetched notes:", fetchedNotes);
-      // Sort notes by their order field
-      fetchedNotes.sort((a, b) => a.order - b.order);
+      fetchedNotes.sort((a, b) => (a.order || 0) - (b.order || 0));
       setNotes(fetchedNotes);
     } catch (error) {
       console.error("Error fetching notes: ", error);
@@ -63,10 +70,10 @@ const Note = () => {
         ...noteToAdd,
         userId: auth.currentUser.uid,
         createdAt: new Date().toISOString(),
-        order: notes.length // Set the order to the current number of notes
+        order: notes.length
       });
       console.log("Note added with ID: ", docRef.id);
-      fetchNotes(); // Refresh notes after adding
+      fetchNotes();
     } catch (error) {
       console.error("Error adding note: ", error);
     }
@@ -203,26 +210,22 @@ const Note = () => {
     }
   };
 
- const toggleNoteExpansion = (id) => {
+  const toggleNoteExpansion = (id) => {
     setExpandedNotes(prev => ({
       ...prev,
       [id]: !prev[id]
     }));
   };
 
-   const truncateText = (text, maxLength) => {
-    if (text.length <= maxLength) return text;
-    return text.substr(0, maxLength) + '...';
-  };
-
   const onDragEnd = async (result) => {
-    if (!result.destination) return;
+    if (!result.destination) {
+      return;
+    }
 
     const items = Array.from(notes);
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
-    // Update the order of items
     const updatedItems = items.map((item, index) => ({
       ...item,
       order: index
@@ -230,7 +233,6 @@ const Note = () => {
 
     setNotes(updatedItems);
 
-    // Update the order in Firestore
     try {
       const batch = writeBatch(db);
       updatedItems.forEach((item) => {
@@ -244,17 +246,16 @@ const Note = () => {
     }
   };
 
-  const filteredNotes = noteOrder
-    .map(id => notes.find(note => note.id === id))
-    .filter(note => 
-      (selectedCategory === 'All' || note.category === selectedCategory) &&
-      (note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       note.content.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+  const truncateText = (text, maxLength) => {
+    if (text.length <= maxLength) return text;
+    return text.substr(0, maxLength) + '...';
+  };
 
-  const completedNotes = notes.filter(note => note.completed).length;
-  const totalNotes = notes.length;
-  const progressPercentage = totalNotes > 0 ? (completedNotes / totalNotes) * 100 : 0;
+  const filteredNotes = notes.filter(note => 
+    (selectedCategory === 'All' || note.category === selectedCategory) &&
+    (note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     note.content.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   return (
     <div className="p-4 max-w-4xl mx-auto">
@@ -301,157 +302,150 @@ const Note = () => {
           <FaPlus className="mr-2" /> ADD NOTE
         </button>
       </div>
-      <div className="mb-4">
-        <div className="text-sm font-medium text-gray-800 dark:text-gray-400">
-          You have {completedNotes}/{totalNotes} notes completed
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4 dark:bg-gray-700">
-          <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
-        </div>
-      </div>
-       return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <Droppable droppableId="notes">
-        {(provided) => (
-          <div
-            {...provided.droppableProps}
-            ref={provided.innerRef}
-            className="grid grid-cols-1 md:grid-cols-2 gap-4"
-          >
-            {notes.map((note, index) => {
-              const backgroundColor = categories[note.category] || '#ffffff';
-              const textColor = getContrastColor(backgroundColor);
-              const isExpanded = expandedNotes[note.id];
-              const shouldTruncate = note.content.length > 100;
-              return (
-                <Draggable key={note.id} draggableId={note.id} index={index}>
-                  {(provided) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                      className={`p-4 rounded shadow-md ${note.completed ? 'opacity-50' : ''}`}
-                      style={{
-                        backgroundColor,
-                        color: textColor,
-                        ...provided.draggableProps.style
-                      }}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={note.completed}
-                            onChange={() => toggleNoteCompletion(note.id, note.completed)}
-                            className="mr-2"
-                          />
-                          <h3 className={`font-bold ${note.completed ? 'line-through' : ''}`}>{note.title}</h3>
+
+      <DragDropContext onDragEnd={onDragEnd}>
+        <Droppable droppableId="notes">
+          {(provided) => (
+            <div
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+              className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            >
+              {filteredNotes.map((note, index) => {
+                const backgroundColor = categories[note.category] || '#ffffff';
+                const textColor = getContrastColor(backgroundColor);
+                const isExpanded = expandedNotes[note.id];
+                const shouldTruncate = note.content.length > 100;
+                return (
+                  <Draggable key={note.id} draggableId={note.id} index={index}>
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                        className={`p-4 rounded shadow-md ${note.completed ? 'opacity-50' : ''} overflow-hidden`}
+                        style={{
+                          backgroundColor,
+                          color: textColor,
+                          ...provided.draggableProps.style
+                        }}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={note.completed}
+                              onChange={() => toggleNoteCompletion(note.id, note.completed)}
+                              className="mr-2"
+                            />
+                            <h3 className={`font-bold ${note.completed ? 'line-through' : ''}`}>{note.title}</h3>
+                          </div>
+                          <div>
+                            <button onClick={() => handleEditNote(note)} className="mr-2" style={{ color: textColor }}><FaEdit /></button>
+                            <button onClick={() => handleDeleteNote(note.id)} style={{ color: textColor }}><FaTrash /></button>
+                          </div>
                         </div>
-                        <div>
-                          <button onClick={() => handleEditNote(note)} className="mr-2" style={{ color: textColor }}><FaEdit /></button>
-                          <button onClick={() => handleDeleteNote(note.id)} style={{ color: textColor }}><FaTrash /></button>
+                        <div className={`mb-2 ${note.completed ? 'line-through' : ''}`}>
+                          <p className="whitespace-pre-wrap break-words">
+                            {shouldTruncate && !isExpanded
+                              ? truncateText(note.content, 100)
+                              : note.content}
+                          </p>
+                          {shouldTruncate && (
+                            <button 
+                              onClick={() => toggleNoteExpansion(note.id)} 
+                              className="text-sm font-medium mt-2"
+                              style={{ color: textColor }}
+                            >
+                              {isExpanded ? (
+                                <>Show Less <FaChevronUp className="inline ml-1" /></>
+                              ) : (
+                                <>Show More <FaChevronDown className="inline ml-1" /></>
+                              )}
+                            </button>
+                          )}
                         </div>
-                      </div>
-                      <div className={`mb-2 ${note.completed ? 'line-through' : ''}`}>
-                        <p className="whitespace-pre-wrap break-words">
-                          {shouldTruncate && !isExpanded
-                            ? truncateText(note.content, 100)
-                            : note.content}
+                        <p className="text-sm mt-2" style={{ color: textColor, opacity: 0.7 }}>
+                          {formatDate(note.createdAt)}
                         </p>
-                        {shouldTruncate && (
-                          <button 
-                            onClick={() => toggleNoteExpansion(note.id)} 
-                            className="text-sm font-medium mt-2"
-                            style={{ color: textColor }}
-                          >
-                            {isExpanded ? (
-                              <>Show Less <FaChevronUp className="inline ml-1" /></>
-                            ) : (
-                              <>Show More <FaChevronDown className="inline ml-1" /></>
-                            )}
-                          </button>
-                        )}
                       </div>
-                      <p className="text-sm mt-2" style={{ color: textColor, opacity: 0.7 }}>
-                        {formatDate(note.createdAt)}
-                      </p>
-                    </div>
-                  )}
-                </Draggable>
-              );
-            })}
-            {provided.placeholder}
-          </div>
-        )}
-      </Droppable>
+                    )}
+                  </Draggable>
+                );
+              })}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
       </DragDropContext>
-        {isAddNoteOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-            <div className="bg-white p-4 rounded-lg w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4">{editingNote ? 'Edit note' : 'Add note'}</h2>
-              <input
-                type="text"
-                placeholder="Title"
-                value={newNote.title}
-                onChange={(e) => setNewNote({...newNote, title: e.target.value})}
-                className="w-full p-2 mb-2 border rounded"
-              />
-              <textarea
-                placeholder="Content (optional)"
-                value={newNote.content}
-                onChange={(e) => setNewNote({...newNote, content: e.target.value})}
-                className="w-full p-2 mb-2 border rounded h-32"
-              />
-              <div className="flex mb-4">
-                <select
-                  value={newNote.category}
-                  onChange={(e) => setNewNote({...newNote, category: e.target.value})}
-                  className="w-full p-2 border rounded mr-2"
-                >
-                  <option value="">Select Category</option>
-                  {Object.keys(categories).map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-                <div className="flex">
-                  <input
-                    type="text"
-                    placeholder="New Category"
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    className="p-2 border rounded-l"
-                  />
-                  <button
-                    onClick={handleAddCategory}
-                    className="bg-customorange-500 text-white px-4 py-2 rounded-r"
-                  >
-                    Add
-                  </button>
-                </div>
-              </div>
-              <div className="flex justify-end">
+
+     {isAddNoteOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+          <div className="bg-white p-4 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">{editingNote ? 'Edit note' : 'Add note'}</h2>
+            <input
+              type="text"
+              placeholder="Title"
+              value={newNote.title}
+              onChange={(e) => setNewNote({...newNote, title: e.target.value})}
+              className="w-full p-2 mb-2 border rounded"
+            />
+            <textarea
+              placeholder="Content (optional)"
+              value={newNote.content}
+              onChange={(e) => setNewNote({...newNote, content: e.target.value})}
+              className="w-full p-2 mb-2 border rounded h-32"
+            />
+            <div className="flex mb-4">
+              <select
+                value={newNote.category}
+                onChange={(e) => setNewNote({...newNote, category: e.target.value})}
+                className="w-full p-2 border rounded mr-2"
+              >
+                <option value="">Select Category</option>
+                {Object.keys(categories).map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+              <div className="flex">
+                <input
+                  type="text"
+                  placeholder="New Category"
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  className="p-2 border rounded-l"
+                />
                 <button
-                  onClick={() => {
-                    setIsAddNoteOpen(false);
-                    setEditingNote(null);
-                    setNewNote({ title: '', content: '', category: '' });
-                  }}
-                  className="px-4 py-2 rounded mr-2 bg-gray-200"
+                  onClick={handleAddCategory}
+                  className="bg-customorange-500 text-white px-4 py-2 rounded-r"
                 >
-                  Cancel
-                </button>
-                <button
-                  onClick={editingNote ? handleUpdateNote : handleAddNote}
-                  className="px-4 py-2 rounded bg-customorange-500 text-white"
-                >
-                  {editingNote ? 'Update' : 'Add'}
+                  Add
                 </button>
               </div>
             </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => {
+                  setIsAddNoteOpen(false);
+                  setEditingNote(null);
+                  setNewNote({ title: '', content: '', category: '' });
+                }}
+                className="px-4 py-2 rounded mr-2 bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={editingNote ? handleUpdateNote : handleAddNote}
+                className="px-4 py-2 rounded bg-customorange-500 text-white"
+              >
+                {editingNote ? 'Update' : 'Add'}
+              </button>
+            </div>
           </div>
-        )}
         </div>
-        );
-        };
+      )}
+    </div>
+  );
+};
 
-        export default Note;
+export default Note;
