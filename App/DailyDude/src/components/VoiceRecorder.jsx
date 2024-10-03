@@ -305,7 +305,7 @@ const VoiceRecorder = () => {
                 </button>
                 {isMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                    <a href={recording.url} download={`${name}.mp4`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                    <a href={recording.url} download={`${name}.mp4`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center" target="_new">
                       <FaDownload className="mr-2" /> Download
                     </a>
                     <button onClick={() => deleteRecording(recording.id, recording.fileName)} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
