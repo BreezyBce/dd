@@ -100,7 +100,7 @@ const Clock = () => {
     stopAlarmSound();
   };
 
-  const dismissAlarm = (id) => {
+  const stopAlarm = (id) => {
     setActiveAlarms(activeAlarms.filter(alarmId => alarmId !== id));
     stopAlarmSound();
   };
@@ -200,7 +200,7 @@ const Clock = () => {
       {activeTab === 'alarm' && (
         <div>
           <h2 className="text-2xl font-bold mb-4">Alarms</h2>
-          <div className="mb-4 flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2">
+          <div className="mb-4 grid grid-cols-1 md:grid-cols-4 gap-2">
             <input
               type="time"
               value={newAlarm.time}
@@ -234,7 +234,7 @@ const Clock = () => {
                   {activeAlarms.includes(alarm.id) && (
                     <>
                       <button onClick={() => snoozeAlarm(alarm.id)} className="bg-yellow-500 text-white px-2 py-1 rounded mr-2">Snooze</button>
-                      <button onClick={() => dismissAlarm(alarm.id)} className="bg-red-500 text-white px-2 py-1 rounded">Dismiss</button>
+                      <button onClick={() => dismissAlarm(alarm.id)} className="bg-red-500 text-white px-2 py-1 rounded">Stop</button>
                     </>
                   )}
                 </div>
