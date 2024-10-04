@@ -11,10 +11,10 @@ const Clock = () => {
   const [timerTime, setTimerTime] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerInput, setTimerInput] = useState({ hours: 0, minutes: 0, seconds: 0 });
-  const [timerPresets] = useState([60, 300, 600, 1800, 3600]); // 1min, 5min, 10min, 30min, 1hour
+  const [timerPresets] = useState([60, 300, 600, 1800, 3600]);
   const [activeTab, setActiveTab] = useState('clock');
-  const [alarmSound] = useState(new Audio('./sound/Alarm.wav'));
-  const [timerSound] = useState(new Audio('./sound/Beep.wav'));
+  const alarmSoundRef = useRef(new Audio());
+  const timerSoundRef = useRef(new Audio('./sound/Beep.wav'));
   const alarmIntervalRef = useRef(null);
 
   useEffect(() => {
@@ -59,20 +59,6 @@ const Clock = () => {
     return () => clearInterval(interval);
   }, [isTimerRunning, timerTime]);
 
-  useEffect(() => {
-    alarmSound.addEventListener('ended', () => {
-      alarmSound.currentTime = 0;
-      alarmSound.play();
-    });
-
-    return () => {
-      alarmSound.removeEventListener('ended', () => {
-        alarmSound.currentTime = 0;
-        alarmSound.play();
-      });
-    };
-  }, [alarmSound]);
-
   const addAlarm = () => {
     if (newAlarm.time) {
       setAlarms([...alarms, { ...newAlarm, id: Date.now() }]);
@@ -115,12 +101,16 @@ const Clock = () => {
       setIsTimerRunning(true);
     }
   };
+  
   const pauseTimer = () => setIsTimerRunning(false);
+  
   const resetTimer = () => {
     setIsTimerRunning(false);
     setTimerTime(0);
     setTimerInput({ hours: 0, minutes: 0, seconds: 0 });
+    stopTimerSound();
   };
+
   const setTimerPreset = (time) => {
     setTimerTime(time);
     setTimerInput({
@@ -141,25 +131,28 @@ const Clock = () => {
   };
 
   const playAlarmSound = (soundFile) => {
-    if (alarmSound) {
-      alarmSound.src = `${process.env.PUBLIC_URL}/sound/${soundFile}`;
-      alarmSound.play().catch(error => {
-        console.error('Failed to play alarm sound:', error);
-      });
-    }
+    stopAlarmSound(); // Stop any currently playing alarm
+    alarmSoundRef.current.src = `${process.env.PUBLIC_URL}/sound/${soundFile}`;
+    alarmSoundRef.current.loop = true;
+    alarmSoundRef.current.play().catch(error => {
+      console.error('Failed to play alarm sound:', error);
+    });
   };
 
   const stopAlarmSound = () => {
-    if (alarmSound) {
-      alarmSound.pause();
-      alarmSound.currentTime = 0;
-    }
+    alarmSoundRef.current.pause();
+    alarmSoundRef.current.currentTime = 0;
   };
 
   const playTimerSound = () => {
-    timerSound.play().catch(error => {
+    timerSoundRef.current.play().catch(error => {
       console.error('Failed to play timer sound:', error);
     });
+  };
+
+  const stopTimerSound = () => {
+    timerSoundRef.current.pause();
+    timerSoundRef.current.currentTime = 0;
   };
 
   const formatTime = (time) => {
@@ -308,7 +301,7 @@ const Clock = () => {
               <button key={preset} onClick={() => setTimerPreset(preset)} className="px-2 py-1 rounded">
                 {preset >= 3600 ? `${preset / 3600}h` : `${preset / 60}m`}
               </button>
-        ))}
+            ))}
           </div>
         </div>
       )}
