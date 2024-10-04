@@ -223,7 +223,7 @@ const Clock = () => {
               <option value="gentle">Gentle Tone</option>
               <option value="loud">Loud Tone</option>
             </select>
-            <button onClick={addAlarm} className="bg-customorange-500 text-white px-4 py-2 rounded w-full md:w-auto"><FaPlus />Add Alarm</button>
+            <button onClick={addAlarm} className="bg-customorange-500 text-white px-4 py-2 rounded w-full md:w-auto"><FaPlus />Add</button>
           </div>
           <ul>
             {alarms.map(alarm => (
