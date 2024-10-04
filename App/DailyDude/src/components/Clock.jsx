@@ -30,7 +30,7 @@ const Clock = () => {
         const [hours, minutes] = alarm.time.split(':');
         if (parseInt(hours) === now.getHours() && parseInt(minutes) === now.getMinutes() && !activeAlarms.includes(alarm.id)) {
           setActiveAlarms(prev => [...prev, alarm.id]);
-          playAlarmSound(alarm.tone);
+          playAlarmSound(alarm.sound);
         }
       });
     }, 1000);
@@ -77,15 +77,15 @@ const Clock = () => {
   const addAlarm = () => {
     if (newAlarm.time) {
       setAlarms([...alarms, { ...newAlarm, id: Date.now() }]);
-      setNewAlarm({ time: '', label: '', tone: 'default' });
+      setNewAlarm({ time: '', label: '', sound: 'Alarm.mp3' });
     }
   };
 
   const deleteAlarm = (id) => {
     setAlarms(alarms.filter(alarm => alarm.id !== id));
-    setActiveAlarms(activeAlarms.filter(alarmId => alarmId !== id));
-    stopAlarmSound();
+    stopAlarm(id);
   };
+
 
   const snoozeAlarm = (id) => {
     setActiveAlarms(activeAlarms.filter(alarmId => alarmId !== id));
@@ -142,22 +142,19 @@ const Clock = () => {
     setTimerTime(totalSeconds);
   };
 
-  const playAlarmSound = () => {
-    alarmSound.play();
-    // Start an interval to check if the alarm is still playing
-    alarmIntervalRef.current = setInterval(() => {
-      if (alarmSound.paused) {
-        alarmSound.play();
-      }
-    }, 1000); // Check every second
+   const playAlarmSound = (soundFile) => {
+    if (alarmSound) {
+      alarmSound.src = `${process.env.PUBLIC_URL}/sound/${soundFile}`;
+      alarmSound.play().catch(error => {
+        console.error('Failed to play alarm sound:', error);
+      });
+    }
   };
 
-  const stopAlarmSound = () => {
-    alarmSound.pause();
-    alarmSound.currentTime = 0;
-    if (alarmIntervalRef.current) {
-      clearInterval(alarmIntervalRef.current);
-      alarmIntervalRef.current = null;
+   const stopAlarmSound = () => {
+    if (alarmSound) {
+      alarmSound.pause();
+      alarmSound.currentTime = 0;
     }
   };
 
