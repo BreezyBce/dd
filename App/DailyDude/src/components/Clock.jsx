@@ -16,7 +16,6 @@ const Clock = () => {
   const alarmSoundRef = useRef(new Audio());
   const timerSoundRef = useRef(new Audio('./sound/Beep.wav'));
   const alarmIntervalRef = useRef(null);
-
   const [alarmSounds] = useState({
     'Alarm.wav': new Audio('/public/sound/Alarm.wav'),
     'Rooster.wav': new Audio('/public/sound/Rooster.wav'),
@@ -25,7 +24,6 @@ const Clock = () => {
     'Morning.wav': new Audio('/public/sound/Morning.wav')
   });
 
-  const timerSoundRef = useRef(new Audio('/public/sound/Beep.wav'));
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
