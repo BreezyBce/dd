@@ -4,7 +4,7 @@ import { FaPlay, FaPause, FaStop, FaPlus, FaTrash } from 'react-icons/fa';
 const Clock = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [alarms, setAlarms] = useState([]);
-  const [newAlarm, setNewAlarm] = useState({ time: '', label: '', tone: 'default' });
+  const [newAlarm, setNewAlarm] = useState({ time: '', label: '', sound: 'Alarm.wav' });
   const [activeAlarms, setActiveAlarms] = useState([]);
   const [stopwatchTime, setStopwatchTime] = useState(0);
   const [isStopwatchRunning, setIsStopwatchRunning] = useState(false);
@@ -13,10 +13,9 @@ const Clock = () => {
   const [timerInput, setTimerInput] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [timerPresets] = useState([60, 300, 600, 1800, 3600]); // 1min, 5min, 10min, 30min, 1hour
   const [activeTab, setActiveTab] = useState('clock');
-  const [alarmSound] = useState(new Audio('./sound/Alarm.wav')); // Add your alarm sound file
-  const [timerSound] = useState(new Audio('./sound/Beep.wav')); // Add your timer sound file
+  const [alarmSound] = useState(new Audio('./sound/Alarm.wav'));
+  const [timerSound] = useState(new Audio('./sound/Beep.wav'));
   const alarmIntervalRef = useRef(null);
-
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -77,7 +76,7 @@ const Clock = () => {
   const addAlarm = () => {
     if (newAlarm.time) {
       setAlarms([...alarms, { ...newAlarm, id: Date.now() }]);
-      setNewAlarm({ time: '', label: '', sound: 'Alarm.mp3' });
+      setNewAlarm({ time: '', label: '', sound: 'Alarm.wav' });
     }
   };
 
@@ -85,7 +84,6 @@ const Clock = () => {
     setAlarms(alarms.filter(alarm => alarm.id !== id));
     stopAlarm(id);
   };
-
 
   const snoozeAlarm = (id) => {
     setActiveAlarms(activeAlarms.filter(alarmId => alarmId !== id));
@@ -100,7 +98,7 @@ const Clock = () => {
     stopAlarmSound();
   };
 
- const stopAlarm = (id) => {
+  const stopAlarm = (id) => {
     setActiveAlarms(activeAlarms.filter(alarmId => alarmId !== id));
     stopAlarmSound();
   };
@@ -142,7 +140,7 @@ const Clock = () => {
     setTimerTime(totalSeconds);
   };
 
-   const playAlarmSound = (soundFile) => {
+  const playAlarmSound = (soundFile) => {
     if (alarmSound) {
       alarmSound.src = `${process.env.PUBLIC_URL}/sound/${soundFile}`;
       alarmSound.play().catch(error => {
@@ -151,7 +149,7 @@ const Clock = () => {
     }
   };
 
-   const stopAlarmSound = () => {
+  const stopAlarmSound = () => {
     if (alarmSound) {
       alarmSound.pause();
       alarmSound.currentTime = 0;
@@ -159,7 +157,9 @@ const Clock = () => {
   };
 
   const playTimerSound = () => {
-    timerSound.play();
+    timerSound.play().catch(error => {
+      console.error('Failed to play timer sound:', error);
+    });
   };
 
   const formatTime = (time) => {
@@ -202,36 +202,40 @@ const Clock = () => {
               type="time"
               value={newAlarm.time}
               onChange={(e) => setNewAlarm({...newAlarm, time: e.target.value})}
-              className="p-2 border rounded text-gray-800 w-full md:w-auto"
+              className="p-2 border rounded text-gray-800 w-full"
             />
             <input
               type="text"
               placeholder="Alarm label"
               value={newAlarm.label}
               onChange={(e) => setNewAlarm({...newAlarm, label: e.target.value})}
-              className="p-2 border rounded w-full md:w-auto"
+              className="p-2 border rounded w-full"
             />
             <select
-              value={newAlarm.tone}
-              onChange={(e) => setNewAlarm({...newAlarm, tone: e.target.value})}
-              className="p-2 border rounded text-gray-800 w-full md:w-auto"
+              value={newAlarm.sound}
+              onChange={(e) => setNewAlarm({...newAlarm, sound: e.target.value})}
+              className="p-2 border rounded text-gray-800 w-full"
             >
-              <option value="default">Default Tone</option>
-              <option value="gentle">Gentle Tone</option>
-              <option value="loud">Loud Tone</option>
+              <option value="Alarm.wav">Default Tone</option>
+              <option value="Rooster.wav">Rooster</option>
+              <option value="Beep.wav">Beep</option>
+              <option value="Retro.wav">Retro</option>
+              <option value="Morning.wav">Morning</option>
             </select>
-            <button onClick={addAlarm} className="bg-customorange-500 text-white px-4 py-2 rounded w-full md:w-auto"><FaPlus />Add</button>
+            <button onClick={addAlarm} className="bg-customorange-500 text-white px-4 py-2 rounded w-full flex items-center justify-center">
+              <FaPlus className="mr-2" /> Add
+            </button>
           </div>
-          <ul>
+          <ul className="space-y-2">
             {alarms.map(alarm => (
-              <li key={alarm.id} className="flex flex-col md:flex-row items-center justify-between p-2 bg-gray-100 rounded">
-                <span>{formatTime12Hour(alarm.time)} - {alarm.label}</span>
-                <div>
-                  <button onClick={() => deleteAlarm(alarm.id)} className="text-red-500 mr-2"><FaTrash /></button>
+              <li key={alarm.id} className="flex items-center justify-between p-2 bg-gray-100 rounded">
+                <span>{formatTime12Hour(alarm.time)} - {alarm.label} ({alarm.sound})</span>
+                <div className="space-x-2">
+                  <button onClick={() => deleteAlarm(alarm.id)} className="text-red-500"><FaTrash /></button>
                   {activeAlarms.includes(alarm.id) && (
                     <>
-                      <button onClick={() => snoozeAlarm(alarm.id)} className="bg-yellow-500 text-white px-2 py-1 rounded mr-2">Snooze</button>
-                      <button onClick={() => dismissAlarm(alarm.id)} className="bg-red-500 text-white px-2 py-1 rounded">Stop</button>
+                      <button onClick={() => snoozeAlarm(alarm.id)} className="bg-yellow-500 text-white px-2 py-1 rounded">Snooze</button>
+                      <button onClick={() => stopAlarm(alarm.id)} className="bg-red-500 text-white px-2 py-1 rounded">Stop</button>
                     </>
                   )}
                 </div>
@@ -304,7 +308,7 @@ const Clock = () => {
               <button key={preset} onClick={() => setTimerPreset(preset)} className="px-2 py-1 rounded">
                 {preset >= 3600 ? `${preset / 3600}h` : `${preset / 60}m`}
               </button>
-            ))}
+        ))}
           </div>
         </div>
       )}
