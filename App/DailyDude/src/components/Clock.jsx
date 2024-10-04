@@ -132,7 +132,7 @@ const Clock = () => {
 
   const playAlarmSound = (soundFile) => {
     stopAlarmSound(); // Stop any currently playing alarm
-    alarmSoundRef.current.src = `${process.env.PUBLIC_URL}/sound/${soundFile}`;
+    alarmSoundRef.current.src = `${process.env.PUBLIC_URL}/public/sound/${soundFile}`;
     alarmSoundRef.current.loop = true;
     alarmSoundRef.current.play().catch(error => {
       console.error('Failed to play alarm sound:', error);
