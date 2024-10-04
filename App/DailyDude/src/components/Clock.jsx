@@ -17,6 +17,16 @@ const Clock = () => {
   const timerSoundRef = useRef(new Audio('./sound/Beep.wav'));
   const alarmIntervalRef = useRef(null);
 
+  const [alarmSounds] = useState({
+    'Alarm.wav': new Audio('/sound/Alarm.wav'),
+    'Rooster.wav': new Audio('/sound/Rooster.wav'),
+    'Beep.wav': new Audio('/sound/Beep.wav'),
+    'Retro.wav': new Audio('/sound/Retro.wav'),
+    'Morning.wav': new Audio('/sound/Morning.wav')
+  });
+
+  const timerSoundRef = useRef(new Audio('/sound/Beep.wav'));
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -130,18 +140,24 @@ const Clock = () => {
     setTimerTime(totalSeconds);
   };
 
-  const playAlarmSound = (soundFile) => {
-    stopAlarmSound(); // Stop any currently playing alarm
-    alarmSoundRef.current.src = `${process.env.PUBLIC_URL}/public/sound/${soundFile}`;
-    alarmSoundRef.current.loop = true;
-    alarmSoundRef.current.play().catch(error => {
-      console.error('Failed to play alarm sound:', error);
-    });
+ const playAlarmSound = (soundFile) => {
+    stopAlarmSound();
+    const sound = alarmSounds[soundFile];
+    if (sound) {
+      sound.loop = true;
+      sound.play().catch(error => {
+        console.error('Failed to play alarm sound:', error);
+      });
+    } else {
+      console.error('Alarm sound not found:', soundFile);
+    }
   };
 
-  const stopAlarmSound = () => {
-    alarmSoundRef.current.pause();
-    alarmSoundRef.current.currentTime = 0;
+ const stopAlarmSound = () => {
+    Object.values(alarmSounds).forEach(sound => {
+      sound.pause();
+      sound.currentTime = 0;
+    });
   };
 
   const playTimerSound = () => {
@@ -205,16 +221,16 @@ const Clock = () => {
               className="p-2 border rounded w-full"
             />
             <select
-              value={newAlarm.sound}
-              onChange={(e) => setNewAlarm({...newAlarm, sound: e.target.value})}
-              className="p-2 border rounded text-gray-800 w-full"
-            >
-              <option value="Alarm.wav">Default Tone</option>
-              <option value="Rooster.wav">Rooster</option>
-              <option value="Beep.wav">Beep</option>
-              <option value="Retro.wav">Retro</option>
-              <option value="Morning.wav">Morning</option>
-            </select>
+      value={newAlarm.sound}
+      onChange={(e) => setNewAlarm({...newAlarm, sound: e.target.value})}
+      className="p-2 border rounded text-gray-800 w-full"
+    >
+      <option value="Alarm.wav">Default Tone</option>
+      <option value="Rooster.wav">Rooster</option>
+      <option value="Beep.wav">Beep</option>
+      <option value="Retro.wav">Retro</option>
+      <option value="Morning.wav">Morning</option>
+    </select>
             <button onClick={addAlarm} className="bg-customorange-500 text-white px-4 py-2 rounded w-full flex items-center justify-center">
               <FaPlus className="mr-2" /> Add
             </button>
