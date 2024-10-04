@@ -100,7 +100,7 @@ const Clock = () => {
     stopAlarmSound();
   };
 
-  const stopAlarm = (id) => {
+ const stopAlarm = (id) => {
     setActiveAlarms(activeAlarms.filter(alarmId => alarmId !== id));
     stopAlarmSound();
   };
