@@ -26,7 +26,7 @@ try {
 
 const app = express();
 
-const corsOrigin = process.env.CORS_ORIGIN || 'https://dd-mu-five.vercel.app';
+const corsOrigin = process.env.CORS_ORIGIN || 'https://app.dailydude.app';
 
 app.use(cors({
   origin: corsOrigin,
