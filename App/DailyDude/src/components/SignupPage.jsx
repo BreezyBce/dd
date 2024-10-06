@@ -3,9 +3,6 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { Link, useNavigate } from 'react-router-dom';
-import { loadStripe } from '@stripe/stripe-js';
-
-const stripePromise = loadStripe('pk_live_51PxkA4A9AcwovfpkfFRUdMdw4sedFAIPEkUz1yamgloRHUMGta3aZYhwlDToLu2XCSck7sevAtNV6bu9VvXIcHSY00LRwIzPeg'); // Replace with your actual publishable key
 
 const SignupPage = () => {
   const [email, setEmail] = useState('');
@@ -13,7 +10,6 @@ const SignupPage = () => {
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -33,11 +29,9 @@ const SignupPage = () => {
     e.preventDefault();
     setError(null);
     setSuccessMessage(null);
-    setIsLoading(true);
 
     if (!isOnline) {
       setError('You are offline. Please check your internet connection and try again.');
-      setIsLoading(false);
       return;
     }
 
@@ -53,10 +47,8 @@ const SignupPage = () => {
       });
 
       console.log('User created successfully:', user.uid);
-      setSuccessMessage('Sign up successful! Redirecting to subscription...');
-      
-      // Redirect to subscription process
-      setTimeout(() => initiateSubscription(user.uid, user.email), 2000);
+      setSuccessMessage('Sign up successful! Redirecting to dashboard...');
+      setTimeout(() => navigate('/dashboard'), 2000);
     } catch (error) {
       console.error('Error signing up:', error);
       if (error.code === 'auth/network-request-failed') {
@@ -64,40 +56,6 @@ const SignupPage = () => {
       } else {
         setError(error.message);
       }
-      setIsLoading(false);
-    }
-  };
-
-  const initiateSubscription = async (userId, userEmail) => {
-    try {
-      const response = await fetch('/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          email: userEmail,
-          priceId: 'price_1PxwpuA9AcwovfpkLQxWKcJo', // Replace with your actual Stripe Price ID
-        }),
-      });
-
-      const session = await response.json();
-
-      // Redirect to Stripe Checkout
-      const stripe = await stripePromise;
-      const { error } = await stripe.redirectToCheckout({
-        sessionId: session.id,
-      });
-
-      if (error) {
-        setError(error.message);
-        setIsLoading(false);
-      }
-    } catch (error) {
-      console.error('Error initiating subscription:', error);
-      setError('An error occurred while setting up the subscription. Please try again.');
-      setIsLoading(false);
     }
   };
 
@@ -140,9 +98,9 @@ const SignupPage = () => {
           <button 
             type="submit" 
             className="w-full bg-customorange-500 text-white py-2 rounded-md hover:bg-customorange-400"
-            disabled={!isOnline || isLoading}
+            disabled={!isOnline}
           >
-            {isLoading ? 'Processing...' : 'Sign Up'}
+            Sign Up
           </button>
         </form>
         <div className="mt-4 text-center">
