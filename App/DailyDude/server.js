@@ -33,12 +33,12 @@ const stripe = new Stripe(STRIPE_SECRET_KEY);
 // Initialize Firebase Admin SDK
 admin.initializeApp({
   credential: admin.credential.cert({
-    // Your service account details
     projectId: process.env.FIREBASE_PROJECT_ID,
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
     privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
   }),
- 
+  databaseURL: process.env.FIREBASE_DATABASE_URL
+});
 
 // OPEN WEATHER API
 app.get('/api/weather', async (req, res) => {
@@ -101,21 +101,41 @@ app.get('/api/exchange-rate', async (req, res) => {
 
 // Stripe routes
 app.post('/create-checkout-session', async (req, res) => {
-  const { customerId, priceId } = req.body;
+  const { userId, email, priceId } = req.body;
 
   try {
-    const customerDoc = await admin.firestore().collection('customers').doc(customerId).get();
-    const customer = customerDoc.data();
+    // Check if a customer already exists for this user
+    const customersSnapshot = await admin.firestore().collection('customers')
+      .where('userId', '==', userId)
+      .limit(1)
+      .get();
+
+    let customer;
+    if (!customersSnapshot.empty) {
+      customer = customersSnapshot.docs[0].data();
+    } else {
+      // Create a new customer document
+      const customerRef = await admin.firestore().collection('customers').add({
+        userId: userId,
+        email: email,
+        stripeCustomerId: null
+      });
+      customer = (await customerRef.get()).data();
+    }
 
     let stripeCustomer;
     if (customer.stripeCustomerId) {
       stripeCustomer = await stripe.customers.retrieve(customer.stripeCustomerId);
     } else {
       stripeCustomer = await stripe.customers.create({
-        email: customer.email,
+        email: email,
+        metadata: {
+          firebaseUID: userId
+        }
       });
-      await admin.firestore().collection('customers').doc(customerId).update({
-        stripeCustomerId: stripeCustomer.id,
+      // Update the customer document with the Stripe customer ID
+      await admin.firestore().collection('customers').doc(customer.id).update({
+        stripeCustomerId: stripeCustomer.id
       });
     }
 
@@ -153,21 +173,19 @@ app.post('/webhook', express.raw({type: 'application/json'}), async (req, res) =
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     
-    // Retrieve the Firestore customer document
-    const customersSnapshot = await admin.firestore().collection('customers')
-      .where('stripeCustomerId', '==', session.customer)
-      .get();
+    // Retrieve the Stripe customer
+    const stripeCustomer = await stripe.customers.retrieve(session.customer);
+    const firebaseUID = stripeCustomer.metadata.firebaseUID;
 
-    if (!customersSnapshot.empty) {
-      const customerDoc = customersSnapshot.docs[0];
-      const userId = customerDoc.data().userId;
-
+    if (firebaseUID) {
       // Update the user's premium status
-      await admin.firestore().collection('users').doc(userId).update({
+      await admin.firestore().collection('users').doc(firebaseUID).update({
         isPremium: true
       });
 
-      console.log(`User ${userId} updated to premium status`);
+      console.log(`User ${firebaseUID} updated to premium status`);
+    } else {
+      console.error('No Firebase UID found for Stripe customer:', session.customer);
     }
   }
 
