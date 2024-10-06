@@ -16,6 +16,13 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// CORS configuration
+const corsOptions = {
+  origin: ['https://dailydude.app', 'https://www.dailydude.app'],
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -101,7 +108,28 @@ app.get('/api/exchange-rate', async (req, res) => {
 
 // Stripe routes
 app.post('/create-checkout-session', async (req, res) => {
-  const { userId, email, priceId } = req.body;
+  const { priceId } = req.body;
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      success_url: 'https://dailydude.app/success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: 'https://dailydude.app/cancel',
+    });
+
+    res.json({ id: session.id });
+  } catch (error) {
+    console.error('Error creating checkout session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
   try {
     // Check if a customer already exists for this user
@@ -139,26 +167,7 @@ app.post('/create-checkout-session', async (req, res) => {
       });
     }
 
-    const session = await stripe.checkout.sessions.create({
-      customer: stripeCustomer.id,
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription',
-      success_url: 'https://dailydude.app/success',
-      cancel_url: 'https://dailydude.app/cancel',
-    });
-
-    res.json({ id: session.id });
-  } catch (error) {
-    console.error('Error creating checkout session:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
+   
 
 app.post('/webhook', express.raw({type: 'application/json'}), async (req, res) => {
   const sig = req.headers['stripe-signature'];
