@@ -107,7 +107,7 @@ app.get('/api/exchange-rate', async (req, res) => {
 });
 
 // Stripe routes
-app.post('/create-checkout-session', async (req, res) => {
+app.post('/create-checkout-session', cors(corsOptions), async (req, res) => {
   const { priceId } = req.body;
 
   try {
