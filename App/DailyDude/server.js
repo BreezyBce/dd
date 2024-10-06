@@ -37,14 +37,37 @@ const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 // Initialize Stripe
 const stripe = new Stripe(STRIPE_SECRET_KEY);
 
-// Initialize Firebase Admin SDK
-admin.initializeApp({
-  credential: admin.credential.cert({
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
-  }),
-  databaseURL: process.env.FIREBASE_DATABASE_URL
+// Webhook handler
+app.post('/webhook', express.raw({type: 'application/json'}), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    
+    // Retrieve the Stripe customer
+    const stripeCustomer = await stripe.customers.retrieve(session.customer);
+    const firebaseUID = stripeCustomer.metadata.firebaseUID;
+
+    if (firebaseUID) {
+      // Update the user's premium status
+      await admin.firestore().collection('users').doc(firebaseUID).update({
+        isPremium: true
+      });
+
+      console.log(`User ${firebaseUID} updated to premium status`);
+    } else {
+      console.error('No Firebase UID found for Stripe customer:', session.customer);
+    }
+  }
+
+  res.json({received: true});
 });
 
 // OPEN WEATHER API
@@ -106,106 +129,4 @@ app.get('/api/exchange-rate', async (req, res) => {
   }
 });
 
-// Stripe routes
-app.post('/create-checkout-session', cors(corsOptions), async (req, res) => {
-  const { priceId } = req.body;
 
-  try {
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription',
-      success_url: 'https://dailydude.app/success?session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: 'https://dailydude.app/cancel',
-    });
-
-    res.json({ id: session.id });
-  } catch (error) {
-    console.error('Error creating checkout session:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-  try {
-    // Check if a customer already exists for this user
-    const customersSnapshot = await admin.firestore().collection('customers')
-      .where('userId', '==', userId)
-      .limit(1)
-      .get();
-
-    let customer;
-    if (!customersSnapshot.empty) {
-      customer = customersSnapshot.docs[0].data();
-    } else {
-      // Create a new customer document
-      const customerRef = await admin.firestore().collection('customers').add({
-        userId: userId,
-        email: email,
-        stripeCustomerId: null
-      });
-      customer = (await customerRef.get()).data();
-    }
-
-    let stripeCustomer;
-    if (customer.stripeCustomerId) {
-      stripeCustomer = await stripe.customers.retrieve(customer.stripeCustomerId);
-    } else {
-      stripeCustomer = await stripe.customers.create({
-        email: email,
-        metadata: {
-          firebaseUID: userId
-        }
-      });
-      // Update the customer document with the Stripe customer ID
-      await admin.firestore().collection('customers').doc(customer.id).update({
-        stripeCustomerId: stripeCustomer.id
-      });
-    }
-
-   
-
-app.post('/webhook', express.raw({type: 'application/json'}), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  let event;
-
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
-  } catch (err) {
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-    
-    // Retrieve the Stripe customer
-    const stripeCustomer = await stripe.customers.retrieve(session.customer);
-    const firebaseUID = stripeCustomer.metadata.firebaseUID;
-
-    if (firebaseUID) {
-      // Update the user's premium status
-      await admin.firestore().collection('users').doc(firebaseUID).update({
-        isPremium: true
-      });
-
-      console.log(`User ${firebaseUID} updated to premium status`);
-    } else {
-      console.error('No Firebase UID found for Stripe customer:', session.customer);
-    }
-  }
-
-  res.json({received: true});
-});
-
-// The "catchall" handler: for any request that doesn't
-// match one above, send back React's index.html file.
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
