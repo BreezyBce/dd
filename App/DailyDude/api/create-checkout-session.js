@@ -7,12 +7,12 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
       console.log('Received request body:', JSON.stringify(req.body));
-      const { priceId, userId } = req.body;
+      const { priceId, userId, email } = req.body;
 
-      console.log('Parsed request:', { priceId, userId });
+      console.log('Parsed request:', { priceId, userId, email });
 
-      if (!priceId) {
-        throw new Error('Price ID is required');
+      if (!priceId || !userId || !email) {
+        throw new Error('Price ID, User ID, and Email are required');
       }
 
       if (!process.env.STRIPE_SECRET_KEY) {
@@ -27,7 +27,21 @@ export default async function handler(req, res) {
       console.log('Stripe Secret Key:', process.env.STRIPE_SECRET_KEY.substring(0, 8) + '...');
       console.log('Domain:', process.env.DOMAIN);
 
+      // Check if a Stripe customer already exists for this user
+      let customer;
+      const customers = await stripe.customers.list({ email: email, limit: 1 });
+      if (customers.data.length > 0) {
+        customer = customers.data[0];
+      } else {
+        // Create a new Stripe customer
+        customer = await stripe.customers.create({
+          email: email,
+          metadata: { firebaseUID: userId }
+        });
+      }
+
       const session = await stripe.checkout.sessions.create({
+        customer: customer.id,
         line_items: [
           {
             price: priceId,
