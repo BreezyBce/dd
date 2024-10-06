@@ -5,72 +5,38 @@ import cors from 'cors';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import { createRequire } from 'module';
-import Stripe from 'stripe';
-import admin from 'firebase-admin';
-
 const require = createRequire(import.meta.url);
 const cities = require('cities.json');
 
+// ... rest of your server code
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// CORS configuration
-const corsOptions = {
-  origin: ['https://dailydude.app', 'https://www.dailydude.app'],
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-};
-
 const app = express();
-app.use(cors());
-app.use(express.json());
 app.use(express.static(path.join(__dirname, 'dist')));
+
 
 const GOOGLE_API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY;
 const EXCHANGE_RATE_API_KEY = process.env.EXCHANGE_RATE_API_KEY;
 const OPENWEATHERMAP_API_KEY = process.env.OPENWEATHERMAP_API_KEY;
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
-const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 
-// Initialize Stripe
-const stripe = new Stripe(STRIPE_SECRET_KEY);
 
-// Webhook handler
-app.post('/webhook', express.raw({type: 'application/json'}), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  let event;
-
+//OPEN WEATHER API
+app.get('/api/weather', async (req, res) => {
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
-  } catch (err) {
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    const { location } = req.query;
+    const response = await axios.get(`https://api.openweathermap.org/data/2.5/weather?q=${location}&appid=${OPENWEATHERMAP_API_KEY}&units=metric`);
+    res.json(response.data);
+  } catch (error) {
+    console.error('Weather API error:', error.response ? error.response.data : error.message);
+    res.status(500).json({ error: 'An error occurred while fetching weather data' });
   }
-
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-    
-    // Retrieve the Stripe customer
-    const stripeCustomer = await stripe.customers.retrieve(session.customer);
-    const firebaseUID = stripeCustomer.metadata.firebaseUID;
-
-    if (firebaseUID) {
-      // Update the user's premium status
-      await admin.firestore().collection('users').doc(firebaseUID).update({
-        isPremium: true
-      });
-
-      console.log(`User ${firebaseUID} updated to premium status`);
-    } else {
-      console.error('No Firebase UID found for Stripe customer:', session.customer);
-    }
-  }
-
-  res.json({received: true});
 });
 
-// OPEN WEATHER API
+
+// Weather header endpoint (update to handle lat/lon)
 app.get('/api/weather', async (req, res) => {
   try {
     const { location, lat, lon } = req.query;
@@ -97,6 +63,9 @@ app.get('/api/city-suggestions', (req, res) => {
     .slice(0, 5);
   res.json(suggestions);
 });
+
+// Serve static files from the React app build directory
+app.use(express.static(path.join(__dirname, 'dist')));
 
 // API routes
 app.post('/api/translate', async (req, res) => {
@@ -129,4 +98,11 @@ app.get('/api/exchange-rate', async (req, res) => {
   }
 });
 
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
 
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
