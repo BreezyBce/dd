@@ -31,18 +31,18 @@ export default async function handler(req, res) {
       console.log('Stripe Secret Key:', process.env.STRIPE_SECRET_KEY.substring(0, 8) + '...');
       console.log('Domain:', process.env.DOMAIN);
 
-      const session = await stripe.checkout.sessions.create({
-        line_items: [
-          {
-            price: priceId,
-            quantity: 1,
-          },
-        ],
-        mode: 'subscription',
-        success_url: `${process.env.DOMAIN}/api/handle-subscription-success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.DOMAIN}/dashboard`,
-        client_reference_id: userId,
-      });
+     const session = await stripe.checkout.sessions.create({
+  line_items: [
+    {
+      price: priceId,
+      quantity: 1,
+    },
+  ],
+  mode: 'subscription',
+  success_url: `${process.env.DOMAIN}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+  cancel_url: `${process.env.DOMAIN}/dashboard`,
+  client_reference_id: userId,
+});
 
       console.log('Checkout session created:', session.id);
       res.status(200).json({ url: session.url });
