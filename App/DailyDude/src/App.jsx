@@ -41,15 +41,22 @@ function App() {
   const PremiumCurrencyConverter = withSubscription(CurrencyConverter, 'premium');
   const PremiumWeatherForecast = withSubscription(WeatherForecast, 'premium');
 
-  useEffect(() => {
+useEffect(() => {
     const checkSubscription = async () => {
       if (auth.currentUser) {
         try {
           const response = await fetch(`/api/subscription-status?userId=${auth.currentUser.uid}`);
           if (response.ok) {
             const data = await response.json();
-            setIsPremium(data.status === 'premium' || (data.status === 'cancelling' && new Date() < new Date(data.endDate)));
-            setSubscriptionEndDate(data.endDate ? new Date(data.endDate) : null);
+            const now = new Date();
+            const endDate = data.endDate ? new Date(data.endDate) : null;
+            
+            setIsPremium(
+              data.status === 'premium' || 
+              (data.status === 'cancelling' && endDate && now < endDate)
+            );
+            setSubscriptionStatus(data.status);
+            setSubscriptionEndDate(endDate);
           }
         } catch (error) {
           console.error('Error checking subscription status:', error);
@@ -62,7 +69,7 @@ function App() {
 
     return () => clearInterval(intervalId);
   }, []);
-
+  
   useEffect(() => {
     console.log('App useEffect triggered');
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
