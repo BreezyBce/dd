@@ -57,18 +57,24 @@ export default async function handler(req, res) {
 }
 
 async function getSubscriptionStatusForUser(userId) {
-  console.log('Checking subscription status for user:', userId);
   try {
     const userDoc = await db.collection('users').doc(userId).get();
     if (!userDoc.exists) {
       throw new Error('User not found');
     }
     const userData = userDoc.data();
-    console.log('User data:', userData);
-    if (userData.subscriptionStatus === 'premium' && userData.subscriptionEndDate) {
+    if (userData.subscriptionStatus === 'cancelling' && userData.subscriptionEndDate) {
       const now = new Date();
       const endDate = userData.subscriptionEndDate.toDate();
-      return now < endDate ? 'premium' : 'free';
+      if (now > endDate) {
+        await db.collection('users').doc(userId).update({
+          subscriptionStatus: 'free',
+          isPremium: false,
+          subscriptionEndDate: null
+        });
+        return 'free';
+      }
+      return 'premium'; // Still treat as premium until end date
     }
     return userData.subscriptionStatus || 'free';
   } catch (error) {
