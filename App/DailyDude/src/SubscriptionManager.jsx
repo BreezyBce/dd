@@ -94,7 +94,7 @@ const SubscriptionManager = () => {
   }
 };
 
-  const handleDowngrade = async () => {
+ const handleDowngrade = async () => {
     if (!currentUser) {
       setError('No user logged in. Please log in to downgrade.');
       return;
@@ -103,17 +103,22 @@ const SubscriptionManager = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await cancelSubscription(currentUser.uid);
-      
-      if (response.error === "No active subscription found for this user") {
-        console.log('No active subscription found. Updating to free plan.');
-      } else if (response.error) {
-        throw new Error(response.error);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/subscription-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'downgrade',
+          userId: currentUser.uid,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to downgrade subscription');
       }
 
-      // Update user's subscription status to free
-      await updateSubscriptionStatus(currentUser.uid, 'free');
-      await updateSubscriptionStatus('free');
+      await checkUserSubscription(currentUser.uid);
       setError(null);
     } catch (error) {
       console.error('Error:', error);
@@ -122,6 +127,8 @@ const SubscriptionManager = () => {
       setLoading(false);
     }
   };
+
+     
 
   return (
     <div className="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-xl dark:bg-gray-800">
