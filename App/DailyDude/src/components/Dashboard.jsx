@@ -66,9 +66,10 @@ const Dashboard = ({ expenses = [] }) => {
             throw new Error('Failed to update subscription status');
           }
           await response.json();
-          setIsPremium(true);
           // Remove the session_id from the URL
           window.history.replaceState({}, document.title, window.location.pathname);
+          // Reload the page after a short delay
+          setTimeout(() => window.location.reload(), 1000);
         } catch (error) {
           console.error('Error updating subscription status:', error);
         }
