@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 const SignupPage = () => {
   const [email, setEmail] = useState('');
@@ -11,6 +11,11 @@ const SignupPage = () => {
   const [successMessage, setSuccessMessage] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if the user is signing up for premium
+  const isPremiumSignup = new URLSearchParams(location.search).get('redirect') === 'premium';
+
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -36,26 +41,34 @@ const SignupPage = () => {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // Create a user document in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
-        email: user.email,
-        createdAt: new Date(),
-        subscriptionStatus: 'free'
+      const response = await fetch('/api/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email, 
+          password,
+          isPremium: isPremiumSignup
+        }),
       });
 
-      console.log('User created successfully:', user.uid);
-      setSuccessMessage('Sign up successful! Redirecting to dashboard...');
-      setTimeout(() => navigate('/dashboard'), 2000);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'An error occurred during signup');
+      }
+
+      if (isPremiumSignup && data.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
+      } else {
+        setSuccessMessage('Sign up successful! Redirecting to dashboard...');
+        setTimeout(() => navigate('/dashboard'), 2000);
+      }
     } catch (error) {
       console.error('Error signing up:', error);
-      if (error.code === 'auth/network-request-failed') {
-        setError('Network error. Please check your internet connection and try again.');
-      } else {
-        setError(error.message);
-      }
+      setError(error.message);
     }
   };
 
