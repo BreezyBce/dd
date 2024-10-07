@@ -28,11 +28,14 @@ export default async function handler(req, res) {
     }
   } else if (req.method === 'POST') {
     try {
-      const { session_id } = req.body;
-      if (!session_id) {
-        throw new Error('Session ID is required');
+      const { action, userId, session_id } = req.body;
+      if (action === 'upgrade') {
+        await handleSuccessfulSubscription(session_id);
+      } else if (action === 'downgrade') {
+        await handleSubscriptionDowngrade(userId);
+      } else {
+        throw new Error('Invalid action');
       }
-      await handleSuccessfulSubscription(session_id);
       res.status(200).json({ message: 'Subscription updated successfully' });
     } catch (error) {
       console.error('Error in POST subscription-status:', error);
@@ -51,6 +54,11 @@ async function getSubscriptionStatusForUser(userId) {
       throw new Error('User not found');
     }
     const userData = userDoc.data();
+    if (userData.subscriptionStatus === 'premium' && userData.subscriptionEndDate) {
+      const now = new Date();
+      const endDate = userData.subscriptionEndDate.toDate();
+      return now < endDate ? 'premium' : 'free';
+    }
     return userData.subscriptionStatus || 'free';
   } catch (error) {
     console.error('Error in getSubscriptionStatusForUser:', error);
@@ -67,16 +75,52 @@ async function handleSuccessfulSubscription(sessionId) {
       throw new Error('User ID not found in session');
     }
 
+    const subscription = await stripe.subscriptions.retrieve(session.subscription);
+    const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+
     await db.collection('users').doc(userId).update({
       isPremium: true,
       stripeCustomerId: session.customer,
       stripeSubscriptionId: session.subscription,
-      subscriptionStatus: 'premium'
+      subscriptionStatus: 'premium',
+      subscriptionEndDate: currentPeriodEnd
     });
 
     console.log(`Subscription updated successfully for user ${userId}`);
   } catch (error) {
     console.error('Error in handleSuccessfulSubscription:', error);
+    throw error;
+  }
+}
+
+async function handleSubscriptionDowngrade(userId) {
+  try {
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      throw new Error('User not found');
+    }
+    const userData = userDoc.data();
+
+    if (userData.stripeSubscriptionId) {
+      const subscription = await stripe.subscriptions.update(userData.stripeSubscriptionId, {
+        cancel_at_period_end: true
+      });
+
+      await db.collection('users').doc(userId).update({
+        subscriptionStatus: 'cancelling',
+        subscriptionEndDate: new Date(subscription.current_period_end * 1000)
+      });
+    } else {
+      await db.collection('users').doc(userId).update({
+        subscriptionStatus: 'free',
+        isPremium: false,
+        subscriptionEndDate: null
+      });
+    }
+
+    console.log(`Subscription downgrade initiated for user ${userId}`);
+  } catch (error) {
+    console.error('Error in handleSubscriptionDowngrade:', error);
     throw error;
   }
 }
