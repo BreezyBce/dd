@@ -14,7 +14,6 @@ const SignupPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Check if the user is signing up for premium
   const isPremiumSignup = new URLSearchParams(location.search).get('redirect') === 'premium';
 
   useEffect(() => {
@@ -32,6 +31,15 @@ const SignupPage = () => {
 
   const handleSignup = async (e) => {
     e.preventDefault();
+    await signUpUser(() => createUserWithEmailAndPassword(auth, email, password));
+  };
+
+  const handleGoogleSignup = async () => {
+    const provider = new GoogleAuthProvider();
+    await signUpUser(() => signInWithPopup(auth, provider));
+  };
+
+  const signUpUser = async (signUpMethod) => {
     setError(null);
     setSuccessMessage(null);
 
@@ -41,28 +49,12 @@ const SignupPage = () => {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await createUserDocument(userCredential.user);
-      handlePostSignup(userCredential.user);
+      const userCredential = await signUpMethod();
+      const user = userCredential.user;
+      await createUserDocument(user);
+      await handlePostSignup(user);
     } catch (error) {
       console.error('Error signing up:', error);
-      setError(error.message);
-    }
-  };
-
-  const handleGoogleSignup = async () => {
-    if (!isOnline) {
-      setError('You are offline. Please check your internet connection and try again.');
-      return;
-    }
-
-    try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      await createUserDocument(result.user);
-      handlePostSignup(result.user);
-    } catch (error) {
-      console.error('Error signing up with Google:', error);
       setError(error.message);
     }
   };
@@ -84,24 +76,28 @@ const SignupPage = () => {
     console.log('User created successfully:', user.uid);
 
     if (isPremiumSignup) {
-      // Redirect to Stripe checkout
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          priceId: 'price_1PxwpuA9AcwovfpkLQxWKcJo', // Your premium plan price ID
-          userId: user.uid,
-        }),
-      });
+      try {
+        const response = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            priceId: 'price_1PxwpuA9AcwovfpkLQxWKcJo',
+            userId: user.uid,
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error('Failed to create checkout session');
+        if (!response.ok) {
+          throw new Error('Failed to create checkout session');
+        }
+
+        const { url } = await response.json();
+        window.location.href = url;
+      } catch (error) {
+        console.error('Error creating checkout session:', error);
+        setError('Failed to initiate premium signup. Please try again.');
       }
-
-      const { url } = await response.json();
-      window.location.href = url; // Redirect to Stripe Checkout
     } else {
       setSuccessMessage('Sign up successful! Redirecting to dashboard...');
       setTimeout(() => navigate('/dashboard'), 2000);
