@@ -15,6 +15,10 @@ export default async function handler(req, res) {
         throw new Error('Price ID is required');
       }
 
+      if (!userId) {
+        throw new Error('User ID is required');
+      }
+
       if (!process.env.STRIPE_SECRET_KEY) {
         throw new Error('Stripe secret key is not set');
       }
@@ -35,7 +39,7 @@ export default async function handler(req, res) {
           },
         ],
         mode: 'subscription',
-        success_url: `${process.env.DOMAIN}/success?session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${process.env.DOMAIN}/api/handle-subscription-success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.DOMAIN}/dashboard`,
         client_reference_id: userId,
       });
