@@ -4,7 +4,6 @@ import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
 
-// Initialize Firebase Admin if it hasn't been initialized
 if (!getApps().length) {
   initializeApp({
     credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY))
@@ -29,14 +28,23 @@ export default async function handler(req, res) {
   } else if (req.method === 'POST') {
     try {
       const { action, userId, session_id } = req.body;
-      if (action === 'upgrade') {
-        await handleSuccessfulSubscription(session_id);
-      } else if (action === 'downgrade') {
-        await handleSubscriptionDowngrade(userId);
-      } else {
-        throw new Error('Invalid action');
+      let result;
+      
+      switch (action) {
+        case 'upgrade':
+          result = await handleSuccessfulSubscription(session_id);
+          break;
+        case 'downgrade':
+          result = await handleSubscriptionDowngrade(userId);
+          break;
+        case 'check':
+          result = await getSubscriptionStatusForUser(userId);
+          break;
+        default:
+          throw new Error('Invalid action');
       }
-      res.status(200).json({ message: 'Subscription updated successfully' });
+      
+      res.status(200).json(result);
     } catch (error) {
       console.error('Error in POST subscription-status:', error);
       res.status(500).json({ error: error.message });
@@ -87,6 +95,7 @@ async function handleSuccessfulSubscription(sessionId) {
     });
 
     console.log(`Subscription updated successfully for user ${userId}`);
+    return { message: 'Subscription updated successfully', status: 'premium' };
   } catch (error) {
     console.error('Error in handleSuccessfulSubscription:', error);
     throw error;
@@ -110,15 +119,17 @@ async function handleSubscriptionDowngrade(userId) {
         subscriptionStatus: 'cancelling',
         subscriptionEndDate: new Date(subscription.current_period_end * 1000)
       });
+
+      return { message: 'Subscription scheduled for cancellation', status: 'cancelling' };
     } else {
       await db.collection('users').doc(userId).update({
         subscriptionStatus: 'free',
         isPremium: false,
         subscriptionEndDate: null
       });
-    }
 
-    console.log(`Subscription downgrade initiated for user ${userId}`);
+      return { message: 'Subscription cancelled', status: 'free' };
+    }
   } catch (error) {
     console.error('Error in handleSubscriptionDowngrade:', error);
     throw error;
