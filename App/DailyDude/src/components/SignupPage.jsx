@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
@@ -31,42 +31,56 @@ const SignupPage = () => {
   }, []);
 
   const handleSignup = async (e) => {
-  e.preventDefault();
-  setError(null);
-  setSuccessMessage(null);
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage(null);
 
-  if (!isOnline) {
-    setError('You are offline. Please check your internet connection and try again.');
-    return;
-  }
-
-  try {
-    console.log('Starting signup process');
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-    console.log('User created successfully:', user.uid);
-
-    // Create a user document in Firestore
-    await setDoc(doc(db, 'users', user.uid), {
-      email: user.email,
-      createdAt: new Date(),
-      subscriptionStatus: 'free'
-    });
-    console.log('User document created in Firestore');
-
-    setSuccessMessage('Sign up successful! Redirecting to dashboard...');
-    setTimeout(() => navigate('/dashboard'), 2000);
-  } catch (error) {
-    console.error('Error in signup process:', error);
-    console.error('Error code:', error.code);
-    console.error('Error message:', error.message);
-    if (error.code === 'auth/network-request-failed') {
-      setError('Network error. Please check your internet connection and try again.');
-    } else {
-      setError(`An error occurred during signup: ${error.message}`);
+    if (!isOnline) {
+      setError('You are offline. Please check your internet connection and try again.');
+      return;
     }
-  }
-};
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Create a user document in Firestore
+      await setDoc(doc(db, 'users', user.uid), {
+        email: user.email,
+        createdAt: new Date(),
+        subscriptionStatus: 'free'
+      });
+
+      console.log('User created successfully:', user.uid);
+
+      if (isPremiumSignup) {
+        // Redirect to Stripe checkout
+        const response = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            priceId: 'price_1PxwpuA9AcwovfpkLQxWKcJo', // Your premium plan price ID
+            userId: user.uid,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create checkout session');
+        }
+
+        const { url } = await response.json();
+        window.location.href = url; // Redirect to Stripe Checkout
+      } else {
+        setSuccessMessage('Sign up successful! Redirecting to dashboard...');
+        setTimeout(() => navigate('/dashboard'), 2000);
+      }
+    } catch (error) {
+      console.error('Error signing up:', error);
+      setError(error.message);
+    }
+  };
 
   const checkUserExistence = async (userId) => {
     const userRef = doc(db, 'users', userId);
