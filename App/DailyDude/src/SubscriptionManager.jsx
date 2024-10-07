@@ -26,11 +26,44 @@ const SubscriptionManager = () => {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const checkSubscriptionStatus = () => {
+      if (subscriptionStatus === 'cancelling' && subscriptionEndDate) {
+        const now = new Date();
+        if (now > subscriptionEndDate) {
+          updateSubscriptionStatus('free');
+          setIsPremiumActive(false);
+        } else {
+          setIsPremiumActive(true);
+        }
+      } else if (subscriptionStatus === 'premium') {
+        setIsPremiumActive(true);
+      } else {
+        setIsPremiumActive(false);
+      }
+    };
+
+    checkSubscriptionStatus();
+
+    const intervalId = setInterval(checkSubscriptionStatus, 60000); // Check every minute
+
+    return () => clearInterval(intervalId);
+  }, [subscriptionStatus, subscriptionEndDate]);
+
   const checkUserSubscription = async (userId) => {
     try {
       const userDoc = await getDoc(doc(db, 'users', userId));
       if (userDoc.exists()) {
-        updateSubscriptionStatus(userDoc.data().subscriptionStatus || 'free');
+        const userData = userDoc.data();
+        updateSubscriptionStatus(userData.subscriptionStatus || 'free');
+        if (userData.subscriptionEndDate) {
+          const endDate = userData.subscriptionEndDate.toDate();
+          setSubscriptionEndDate(endDate);
+          if (userData.subscriptionStatus === 'cancelling' && new Date() > endDate) {
+            await updateDoc(doc(db, 'users', userId), { subscriptionStatus: 'free' });
+            updateSubscriptionStatus('free');
+          }
+        }
       }
     } catch (error) {
       console.error('Error checking user subscription:', error);
@@ -128,17 +161,26 @@ const SubscriptionManager = () => {
     }
   };
 
-     
+      const renderSubscriptionMessage = () => {
+    if (subscriptionStatus === 'premium') {
+      return "You are currently on the Premium plan.";
+    } else if (subscriptionStatus === 'cancelling' && subscriptionEndDate) {
+      return `Your subscription has been cancelled. You can still access premium features until ${subscriptionEndDate.toLocaleDateString()}.`;
+    } else {
+      return "You are currently on the Free plan.";
+    }
+  };
 
   return (
     <div className="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-xl dark:bg-gray-800">
       <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">Subscription Management</h1>
 
-      <div className="mb-8">
+       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-2 text-gray-700 dark:text-gray-300">Current Plan</h2>
         <p className="text-lg text-gray-600 dark:text-gray-400">
-          You are currently on the <span className="font-bold text-blue-600 dark:text-blue-400">{subscriptionStatus === 'premium' ? 'Premium' : 'Free'}</span> plan.
+          {renderSubscriptionMessage()}
         </p>
+        {isPremiumActive && <p className="text-sm text-green-500 mt-2">Premium features are currently active.</p>}
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
