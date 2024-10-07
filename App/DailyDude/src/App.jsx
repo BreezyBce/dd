@@ -209,7 +209,7 @@ useEffect(() => {
 
   return (
     <AuthProvider>
-      <SubscriptionProvider>
+      <SubscriptionProvider value={{ status: subscriptionStatus, isPremium, endDate: subscriptionEndDate }}>
         <Router>
           <Routes>
             <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage />} />
