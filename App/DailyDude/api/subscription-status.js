@@ -53,7 +53,7 @@ async function handleSuccessfulSubscription(sessionId) {
     isPremium: true,
     stripeCustomerId: session.customer,
     stripeSubscriptionId: session.subscription,
-    subscriptionStatus: 'active'
+    subscriptionStatus: 'premium'
   });
 
   // You might want to perform additional actions here, like sending a welcome email
