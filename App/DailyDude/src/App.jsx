@@ -40,6 +40,27 @@ function App() {
   const PremiumWeatherForecast = withSubscription(WeatherForecast, 'premium');
 
   useEffect(() => {
+  const checkSubscription = async () => {
+    if (auth.currentUser) {
+      try {
+        const response = await fetch(`/api/subscription-status?userId=${auth.currentUser.uid}`);
+        if (response.ok) {
+          const data = await response.json();
+          setIsPremium(data.status === 'premium' || data.status === 'cancelling');
+        }
+      } catch (error) {
+        console.error('Error checking subscription status:', error);
+      }
+    }
+  };
+
+  checkSubscription();
+  const intervalId = setInterval(checkSubscription, 60000); // Check every minute
+
+  return () => clearInterval(intervalId);
+}, []);
+
+  useEffect(() => {
     console.log('App useEffect triggered');
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       console.log('Auth state changed:', authUser ? 'User logged in' : 'No user');
