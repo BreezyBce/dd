@@ -36,29 +36,32 @@ function App() {
   const [widgets, setWidgets] = useState([]);
   const [subscriptionStatus, setSubscriptionStatus] = useState('free');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
+  const [subscriptionEndDate, setSubscriptionEndDate] = useState(null);
   const PremiumCurrencyConverter = withSubscription(CurrencyConverter, 'premium');
   const PremiumWeatherForecast = withSubscription(WeatherForecast, 'premium');
 
   useEffect(() => {
-  const checkSubscription = async () => {
-    if (auth.currentUser) {
-      try {
-        const response = await fetch(`/api/subscription-status?userId=${auth.currentUser.uid}`);
-        if (response.ok) {
-          const data = await response.json();
-          setIsPremium(data.status === 'premium' || data.status === 'cancelling');
+    const checkSubscription = async () => {
+      if (auth.currentUser) {
+        try {
+          const response = await fetch(`/api/subscription-status?userId=${auth.currentUser.uid}`);
+          if (response.ok) {
+            const data = await response.json();
+            setIsPremium(data.status === 'premium' || (data.status === 'cancelling' && new Date() < new Date(data.endDate)));
+            setSubscriptionEndDate(data.endDate ? new Date(data.endDate) : null);
+          }
+        } catch (error) {
+          console.error('Error checking subscription status:', error);
         }
-      } catch (error) {
-        console.error('Error checking subscription status:', error);
       }
-    }
-  };
+    };
 
-  checkSubscription();
-  const intervalId = setInterval(checkSubscription, 60000); // Check every minute
+    checkSubscription();
+    const intervalId = setInterval(checkSubscription, 60000); // Check every minute
 
-  return () => clearInterval(intervalId);
-}, []);
+    return () => clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     console.log('App useEffect triggered');
