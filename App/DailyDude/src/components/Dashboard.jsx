@@ -9,6 +9,8 @@ import WeatherForecast from './WeatherForecast';
 import { FaTrash, FaPlus, FaExpand, FaCompress } from 'react-icons/fa';
 import { collection, doc, getDoc, setDoc, query, where, getDocs,  addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
+import { useLocation } from 'react-router-dom';
+
 
 
 // Define all available widget types
