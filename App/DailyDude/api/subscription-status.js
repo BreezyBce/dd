@@ -21,8 +21,8 @@ export default async function handler(req, res) {
       if (!userId) {
         throw new Error('User ID is required');
       }
-      const status = await getSubscriptionStatusForUser(userId);
-      res.status(200).json({ status });
+      const { status, endDate } = await getSubscriptionStatusForUser(userId);
+      res.status(200).json({ status, endDate });
     } catch (error) {
       console.error('Error in GET subscription-status:', error);
       res.status(500).json({ error: error.message });
@@ -57,21 +57,23 @@ export default async function handler(req, res) {
 }
 
 async function getSubscriptionStatusForUser(userId) {
+  console.log('Checking subscription status for user:', userId);
   try {
     const userDoc = await db.collection('users').doc(userId).get();
     if (!userDoc.exists) {
       throw new Error('User not found');
     }
     const userData = userDoc.data();
+    console.log('User data:', userData);
+    
     let status = userData.subscriptionStatus || 'free';
-    let endDate = null;
+    let endDate = userData.subscriptionEndDate ? userData.subscriptionEndDate.toDate() : null;
 
-    if (userData.subscriptionEndDate) {
-      endDate = userData.subscriptionEndDate.toDate();
+    if (status === 'cancelling' && endDate) {
       const now = new Date();
-      if (status === 'cancelling' && now < endDate) {
+      if (now < endDate) {
         status = 'premium'; // Treat as premium if still within the subscription period
-      } else if (now >= endDate) {
+      } else {
         // Update to free if the end date has passed
         await db.collection('users').doc(userId).update({
           subscriptionStatus: 'free',
@@ -83,7 +85,11 @@ async function getSubscriptionStatusForUser(userId) {
       }
     }
 
-    return { status, endDate: endDate ? endDate.toISOString() : null };
+    console.log('Returning status:', status, 'endDate:', endDate);
+    return { 
+      status, 
+      endDate: endDate ? endDate.toISOString() : null 
+    };
   } catch (error) {
     console.error('Error in getSubscriptionStatusForUser:', error);
     throw error;
@@ -114,7 +120,11 @@ async function handleSuccessfulSubscription(sessionId) {
     });
 
     console.log(`Subscription updated successfully for user ${userId}`);
-    return { message: 'Subscription updated successfully', status: 'premium' };
+    return { 
+      message: 'Subscription updated successfully', 
+      status: 'premium',
+      endDate: currentPeriodEnd.toISOString()
+    };
   } catch (error) {
     console.error('Error in handleSuccessfulSubscription:', error);
     throw error;
@@ -134,12 +144,18 @@ async function handleSubscriptionDowngrade(userId) {
         cancel_at_period_end: true
       });
 
+      const endDate = new Date(subscription.current_period_end * 1000);
+
       await db.collection('users').doc(userId).update({
         subscriptionStatus: 'cancelling',
-        subscriptionEndDate: new Date(subscription.current_period_end * 1000)
+        subscriptionEndDate: endDate
       });
 
-      return { message: 'Subscription scheduled for cancellation', status: 'cancelling' };
+      return { 
+        message: 'Subscription scheduled for cancellation', 
+        status: 'cancelling',
+        endDate: endDate.toISOString()
+      };
     } else {
       await db.collection('users').doc(userId).update({
         subscriptionStatus: 'free',
@@ -147,7 +163,11 @@ async function handleSubscriptionDowngrade(userId) {
         subscriptionEndDate: null
       });
 
-      return { message: 'Subscription cancelled', status: 'free' };
+      return { 
+        message: 'Subscription cancelled', 
+        status: 'free',
+        endDate: null
+      };
     }
   } catch (error) {
     console.error('Error in handleSubscriptionDowngrade:', error);
