@@ -17,17 +17,25 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       const { userId } = req.query;
+      if (!userId) {
+        throw new Error('User ID is required');
+      }
       const status = await getSubscriptionStatusForUser(userId);
       res.status(200).json({ status });
     } catch (error) {
+      console.error('Error in GET subscription-status:', error);
       res.status(500).json({ error: error.message });
     }
   } else if (req.method === 'POST') {
     try {
       const { session_id } = req.body;
+      if (!session_id) {
+        throw new Error('Session ID is required');
+      }
       await handleSuccessfulSubscription(session_id);
       res.status(200).json({ message: 'Subscription updated successfully' });
     } catch (error) {
+      console.error('Error in POST subscription-status:', error);
       res.status(500).json({ error: error.message });
     }
   } else {
@@ -37,24 +45,38 @@ export default async function handler(req, res) {
 }
 
 async function getSubscriptionStatusForUser(userId) {
-  const userDoc = await db.collection('users').doc(userId).get();
-  if (!userDoc.exists) {
-    throw new Error('User not found');
+  try {
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      throw new Error('User not found');
+    }
+    const userData = userDoc.data();
+    return userData.subscriptionStatus || 'free';
+  } catch (error) {
+    console.error('Error in getSubscriptionStatusForUser:', error);
+    throw error;
   }
-  const userData = userDoc.data();
-  return userData.subscriptionStatus || 'free';
 }
 
 async function handleSuccessfulSubscription(sessionId) {
-  const session = await stripe.checkout.sessions.retrieve(sessionId);
-  const userId = session.client_reference_id;
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const userId = session.client_reference_id;
 
-  await db.collection('users').doc(userId).update({
-    isPremium: true,
-    stripeCustomerId: session.customer,
-    stripeSubscriptionId: session.subscription,
-    subscriptionStatus: 'premium'
-  });
+    if (!userId) {
+      throw new Error('User ID not found in session');
+    }
 
-  // You might want to perform additional actions here, like sending a welcome email
+    await db.collection('users').doc(userId).update({
+      isPremium: true,
+      stripeCustomerId: session.customer,
+      stripeSubscriptionId: session.subscription,
+      subscriptionStatus: 'premium'
+    });
+
+    console.log(`Subscription updated successfully for user ${userId}`);
+  } catch (error) {
+    console.error('Error in handleSuccessfulSubscription:', error);
+    throw error;
+  }
 }
