@@ -13,6 +13,8 @@ if (!getApps().length) {
 const db = getFirestore();
 
 export default async function handler(req, res) {
+  console.log('Received request:', req.method, req.body || req.query);
+
   if (req.method === 'GET') {
     try {
       const { userId } = req.query;
@@ -28,8 +30,9 @@ export default async function handler(req, res) {
   } else if (req.method === 'POST') {
     try {
       const { action, userId, session_id } = req.body;
+      console.log('Processing action:', action, 'for user:', userId, 'session:', session_id);
+
       let result;
-      
       switch (action) {
         case 'upgrade':
           result = await handleSuccessfulSubscription(session_id);
@@ -37,17 +40,15 @@ export default async function handler(req, res) {
         case 'downgrade':
           result = await handleSubscriptionDowngrade(userId);
           break;
-        case 'check':
-          result = await getSubscriptionStatusForUser(userId);
-          break;
         default:
           throw new Error('Invalid action');
       }
       
+      console.log('Action result:', result);
       res.status(200).json(result);
     } catch (error) {
       console.error('Error in POST subscription-status:', error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error.message, stack: error.stack });
     }
   } else {
     res.setHeader('Allow', ['GET', 'POST']);
@@ -56,12 +57,14 @@ export default async function handler(req, res) {
 }
 
 async function getSubscriptionStatusForUser(userId) {
+  console.log('Checking subscription status for user:', userId);
   try {
     const userDoc = await db.collection('users').doc(userId).get();
     if (!userDoc.exists) {
       throw new Error('User not found');
     }
     const userData = userDoc.data();
+    console.log('User data:', userData);
     if (userData.subscriptionStatus === 'premium' && userData.subscriptionEndDate) {
       const now = new Date();
       const endDate = userData.subscriptionEndDate.toDate();
@@ -75,8 +78,10 @@ async function getSubscriptionStatusForUser(userId) {
 }
 
 async function handleSuccessfulSubscription(sessionId) {
+  console.log('Handling successful subscription for session:', sessionId);
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
+    console.log('Retrieved session:', session);
     const userId = session.client_reference_id;
 
     if (!userId) {
@@ -84,6 +89,7 @@ async function handleSuccessfulSubscription(sessionId) {
     }
 
     const subscription = await stripe.subscriptions.retrieve(session.subscription);
+    console.log('Retrieved subscription:', subscription);
     const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
 
     await db.collection('users').doc(userId).update({
