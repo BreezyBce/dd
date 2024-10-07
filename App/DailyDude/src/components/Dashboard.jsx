@@ -44,7 +44,38 @@ const Dashboard = ({ expenses = [] }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [todayExpenses, setTodayExpenses] = useState([]);
   const [isPremium, setIsPremium] = useState(false);
+  const location = useLocation();
 
+  useEffect(() => {
+    const handlePostCheckoutRedirect = async () => {
+      const urlParams = new URLSearchParams(location.search);
+      const sessionId = urlParams.get('session_id');
+      
+      if (sessionId) {
+        try {
+          const response = await fetch('/api/subscription-status', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ session_id: sessionId }),
+          });
+          if (!response.ok) {
+            throw new Error('Failed to update subscription status');
+          }
+          await response.json();
+          setIsPremium(true);
+          // Remove the session_id from the URL
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (error) {
+          console.error('Error updating subscription status:', error);
+        }
+      }
+    };
+
+    handlePostCheckoutRedirect();
+  }, [location]);
+  
   useEffect(() => {
     const checkSubscriptionStatus = async () => {
       const user = auth.currentUser;
