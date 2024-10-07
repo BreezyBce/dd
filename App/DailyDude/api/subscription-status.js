@@ -63,20 +63,27 @@ async function getSubscriptionStatusForUser(userId) {
       throw new Error('User not found');
     }
     const userData = userDoc.data();
-    if (userData.subscriptionStatus === 'cancelling' && userData.subscriptionEndDate) {
+    let status = userData.subscriptionStatus || 'free';
+    let endDate = null;
+
+    if (userData.subscriptionEndDate) {
+      endDate = userData.subscriptionEndDate.toDate();
       const now = new Date();
-      const endDate = userData.subscriptionEndDate.toDate();
-      if (now > endDate) {
+      if (status === 'cancelling' && now < endDate) {
+        status = 'premium'; // Treat as premium if still within the subscription period
+      } else if (now >= endDate) {
+        // Update to free if the end date has passed
         await db.collection('users').doc(userId).update({
           subscriptionStatus: 'free',
           isPremium: false,
           subscriptionEndDate: null
         });
-        return 'free';
+        status = 'free';
+        endDate = null;
       }
-      return 'premium'; // Still treat as premium until end date
     }
-    return userData.subscriptionStatus || 'free';
+
+    return { status, endDate: endDate ? endDate.toISOString() : null };
   } catch (error) {
     console.error('Error in getSubscriptionStatusForUser:', error);
     throw error;
