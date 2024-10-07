@@ -14,6 +14,8 @@ const SubscriptionManager = () => {
   const { subscriptionStatus, updateSubscriptionStatus } = useSubscription();
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
+  const [subscriptionEndDate, setSubscriptionEndDate] = useState(null);
+  const [isPremiumActive, setIsPremiumActive] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
