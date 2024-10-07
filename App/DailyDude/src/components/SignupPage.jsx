@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { FaGoogle } from 'react-icons/fa';
 
 const SignupPage = () => {
   const [email, setEmail] = useState('');
@@ -15,7 +16,6 @@ const SignupPage = () => {
 
   // Check if the user is signing up for premium
   const isPremiumSignup = new URLSearchParams(location.search).get('redirect') === 'premium';
-
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -42,56 +42,69 @@ const SignupPage = () => {
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // Create a user document in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
-        email: user.email,
-        createdAt: new Date(),
-        subscriptionStatus: 'free'
-      });
-
-      console.log('User created successfully:', user.uid);
-
-      if (isPremiumSignup) {
-        // Redirect to Stripe checkout
-        const response = await fetch('/api/create-checkout-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            priceId: 'price_1PxwpuA9AcwovfpkLQxWKcJo', // Your premium plan price ID
-            userId: user.uid,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to create checkout session');
-        }
-
-        const { url } = await response.json();
-        window.location.href = url; // Redirect to Stripe Checkout
-      } else {
-        setSuccessMessage('Sign up successful! Redirecting to dashboard...');
-        setTimeout(() => navigate('/dashboard'), 2000);
-      }
+      await createUserDocument(userCredential.user);
+      handlePostSignup(userCredential.user);
     } catch (error) {
       console.error('Error signing up:', error);
       setError(error.message);
     }
   };
 
-  const checkUserExistence = async (userId) => {
-    const userRef = doc(db, 'users', userId);
+  const handleGoogleSignup = async () => {
+    if (!isOnline) {
+      setError('You are offline. Please check your internet connection and try again.');
+      return;
+    }
+
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      await createUserDocument(result.user);
+      handlePostSignup(result.user);
+    } catch (error) {
+      console.error('Error signing up with Google:', error);
+      setError(error.message);
+    }
+  };
+
+  const createUserDocument = async (user) => {
+    const userRef = doc(db, 'users', user.uid);
     const userSnap = await getDoc(userRef);
 
-    if (userSnap.exists()) {
-      console.log('User data:', userSnap.data());
-      return true;
+    if (!userSnap.exists()) {
+      await setDoc(userRef, {
+        email: user.email,
+        createdAt: new Date(),
+        subscriptionStatus: 'free'
+      });
+    }
+  };
+
+  const handlePostSignup = async (user) => {
+    console.log('User created successfully:', user.uid);
+
+    if (isPremiumSignup) {
+      // Redirect to Stripe checkout
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId: 'price_1PxwpuA9AcwovfpkLQxWKcJo', // Your premium plan price ID
+          userId: user.uid,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+
+      const { url } = await response.json();
+      window.location.href = url; // Redirect to Stripe Checkout
     } else {
-      console.log('No such user!');
-      return false;
+      setSuccessMessage('Sign up successful! Redirecting to dashboard...');
+      setTimeout(() => navigate('/dashboard'), 2000);
     }
   };
 
@@ -126,6 +139,15 @@ const SignupPage = () => {
             Sign Up
           </button>
         </form>
+        <div className="mt-4">
+          <button
+            onClick={handleGoogleSignup}
+            className="w-full bg-white text-gray-700 py-2 px-4 rounded-md border border-gray-300 hover:bg-gray-100 flex items-center justify-center"
+            disabled={!isOnline}
+          >
+            <FaGoogle className="mr-2" /> Sign up with Google
+          </button>
+        </div>
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-600">
             Already have an account? <Link to="/login" className="text-customorange-500 hover:underline">Login</Link>
