@@ -43,6 +43,70 @@ const Dashboard = ({ expenses = [] }) => {
   const widgetRefs = useRef({});
   const [isLoading, setIsLoading] = useState(true);
   const [todayExpenses, setTodayExpenses] = useState([]);
+  const [isPremium, setIsPremium] = useState(false);
+
+  useEffect(() => {
+    const checkSubscriptionStatus = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          const response = await fetch(`/api/subscription-status?userId=${user.uid}`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch subscription status');
+          }
+          const data = await response.json();
+          setIsPremium(data.status === 'active');
+        } catch (error) {
+          console.error('Error checking subscription status:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setIsLoading(false);
+      }
+    };
+
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        checkSubscriptionStatus();
+      } else {
+        setIsPremium(false);
+        setIsLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const handlePostCheckoutRedirect = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionId = urlParams.get('session_id');
+      
+      if (sessionId) {
+        try {
+          const response = await fetch('/api/subscription-status', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ session_id: sessionId }),
+          });
+          if (!response.ok) {
+            throw new Error('Failed to update subscription status');
+          }
+          await response.json();
+          setIsPremium(true);
+          // Remove the session_id from the URL
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (error) {
+          console.error('Error updating subscription status:', error);
+        }
+      }
+    };
+
+    handlePostCheckoutRedirect();
+  }, []);
 
 
     const fetchDashboardLayout = async (userId) => {
