@@ -69,7 +69,7 @@ const LoginPage = () => {
           <p>Or login with</p>
           <div className="flex justify-center mt-2 space-x-4">
             <button onClick={handleGoogleLogin} className="flex items-center border px-4 py-2 rounded-md hover:bg-gray-50">
-              <FaGoogle /> <span style={{ paddingLeft: 5 }}>Google</span>
+              <FaGoogle className="mr-2" /> Log in with Google 
             </button>
           </div>
         </div>
