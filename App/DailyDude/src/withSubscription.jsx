@@ -6,7 +6,7 @@ const withSubscription = (WrappedComponent, requiredPlan = 'free') => {
   return function WithSubscriptionComponent(props) {
     const { subscriptionStatus, isPremium, subscriptionEndDate, checkSubscriptionStatus } = useSubscription();
     const [isLoading, setIsLoading] = useState(true);
-
+ 
     useEffect(() => {
       const fetchStatus = async () => {
         await checkSubscriptionStatus();
