@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import withSubscription from '../withSubscription';
-import { useSubscription } from '../SubscriptionContext';
-import UpgradeButton from './UpgradeButton'; // Import the UpgradeButton component
 
 const CurrencyConverter = () => {
   const [amount, setAmount] = useState(1);
@@ -57,17 +55,6 @@ const fetchExchangeRate = async () => {
     setFromCurrency(toCurrency);
     setToCurrency(fromCurrency);
   };
-
-    return (
-      <div className="max-w-md mx-auto p-6 bg-white rounded-lg dark:bg-dark-background-2 text-gray-800 dark:text-gray-400">
-        <h2 className="text-2xl font-bold mb-6">Currency Converter</h2>
-        <p className="text-center mb-4">This feature is only available for premium users.</p>
-        <div className="flex justify-center">
-          <UpgradeButton />
-        </div>
-      </div>
-    );
-  
 
   return (
     <div className="max-w-md mx-auto p-6 bg-white rounded-lg dark:bg-dark-background-2 text-gray-800 dark:text-gray-400">
@@ -129,7 +116,7 @@ const fetchExchangeRate = async () => {
         </div>
       )}
     </div>
-};
+  );
 };
 
 export default withSubscription(CurrencyConverter, 'premium');
