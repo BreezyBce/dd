@@ -137,11 +137,12 @@ const SignupPage = () => {
         </form>
         <div className="mt-4 text-center text-sm text-gray-600">
                     <p>Or</p>
+          <div class="flex justify-center mt-4 space-x-4">
           <button
             onClick={handleGoogleSignup}
             className="w-full bg-white text-gray-700 py-2 px-4 rounded-md border border-gray-300 hover:bg-gray-100 flex items-center justify-center"
             disabled={!isOnline}
-          >
+          ></div>
             <FaGoogle className="mr-2" /> Sign up with Google
           </button>
         </div>
