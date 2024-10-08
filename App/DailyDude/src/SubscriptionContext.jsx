@@ -16,26 +16,24 @@ export const SubscriptionProvider = ({ children }) => {
       if (userDoc.exists()) {
         const userData = userDoc.data();
         const status = userData.subscriptionStatus || 'free';
-        const endDate = userData.subscriptionEndDate ? new Date(userData.subscriptionEndDate.toDate()) : null;
+        const endDate = userData.subscriptionEndDate ? userData.subscriptionEndDate.toDate() : null;
         
         setSubscriptionStatus(status);
         setSubscriptionEndDate(endDate);
 
         const now = new Date();
-        if (status === 'premium' || (status === 'cancelling' && endDate && now < endDate)) {
-          setIsPremium(true);
-        } else {
+        const isPremiumActive = status === 'premium' || (status === 'cancelling' && endDate && now < endDate);
+        setIsPremium(isPremiumActive);
+
+        if (status === 'cancelling' && (!endDate || now >= endDate)) {
+          await updateDoc(doc(db, 'users', user.uid), {
+            subscriptionStatus: 'free',
+            subscriptionEndDate: null,
+            isPremium: false
+          });
+          setSubscriptionStatus('free');
+          setSubscriptionEndDate(null);
           setIsPremium(false);
-          if (status === 'cancelling' && (!endDate || now >= endDate)) {
-            // Update status to 'free' if end date has passed
-            await updateDoc(doc(db, 'users', user.uid), {
-              subscriptionStatus: 'free',
-              subscriptionEndDate: null,
-              isPremium: false
-            });
-            setSubscriptionStatus('free');
-            setSubscriptionEndDate(null);
-          }
         }
       }
     } else {
