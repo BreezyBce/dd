@@ -163,11 +163,13 @@ const SubscriptionManager = () => {
     }
   };
 
-      const renderSubscriptionMessage = () => {
-    if (subscriptionStatus === 'premium') {
-      return "You are currently on the Premium plan.";
-    } else if (subscriptionStatus === 'cancelling' && subscriptionEndDate) {
-      return `Your subscription has been cancelled. You can still access premium features until ${subscriptionEndDate.toLocaleDateString()}.`;
+     const renderSubscriptionMessage = () => {
+    if (isPremium) {
+      if (subscriptionStatus === 'cancelling' && subscriptionEndDate) {
+        return `Your subscription has been cancelled. You can still access premium features until ${new Date(subscriptionEndDate).toLocaleDateString()}.`;
+      } else {
+        return "You are currently on the Premium plan.";
+      }
     } else {
       return "You are currently on the Free plan.";
     }
