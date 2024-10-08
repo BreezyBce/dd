@@ -203,8 +203,26 @@ function App() {
 
   return (
     <AuthProvider>
-      <SubscriptionProvider value={{ status: subscriptionStatus, isPremium, endDate: subscriptionEndDate }}>
-        <Router>
+<SubscriptionProvider value={{
+      status: subscriptionStatus,
+      endDate: subscriptionEndDate,
+      checkSubscriptionStatus: async () => {
+        if (auth.currentUser) {
+          try {
+            const response = await fetch(`/api/subscription-status?userId=${auth.currentUser.uid}`);
+            if (response.ok) {
+              const data = await response.json();
+              setSubscriptionStatus(data.status);
+              setSubscriptionEndDate(data.endDate);
+              return { status: data.status, endDate: data.endDate };
+            }
+          } catch (error) {
+            console.error('Error checking subscription status:', error);
+          }
+        }
+        return { status: subscriptionStatus, endDate: subscriptionEndDate };
+      }
+    }}>        <Router>
           <Routes>
             <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage />} />
             <Route path="/signup" element={user ? <Navigate to="/dashboard" /> : <SignupPage />} />
