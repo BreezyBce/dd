@@ -4,7 +4,7 @@ import UpgradeButton from './components/UpgradeButton';
 
 const withSubscription = (WrappedComponent, requiredPlan = 'free') => {
   return function WithSubscriptionComponent(props) {
-    const { subscriptionStatus, isPremium, subscriptionEndDate, checkSubscriptionStatus } = useSubscription();
+    const { subscriptionStatus, subscriptionEndDate, checkSubscriptionStatus } = useSubscription();
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -19,7 +19,15 @@ const withSubscription = (WrappedComponent, requiredPlan = 'free') => {
       return <div>Loading...</div>;
     }
 
-    if (isPremium || requiredPlan === 'free') {
+    const isPremiumAccess = () => {
+      if (subscriptionStatus === 'premium') return true;
+      if (subscriptionStatus === 'cancelling' && subscriptionEndDate) {
+        return new Date() < new Date(subscriptionEndDate);
+      }
+      return false;
+    };
+
+    if (isPremiumAccess() || requiredPlan === 'free') {
       return <WrappedComponent {...props} />;
     } else {
       return (
