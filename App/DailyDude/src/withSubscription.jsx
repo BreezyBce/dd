@@ -27,10 +27,10 @@ const withSubscription = (WrappedComponent, requiredPlan = 'free') => {
           <p className="mb-4 text-gray-800 dark:text-gray-400">This feature requires a premium subscription.</p>
           {subscriptionStatus === 'cancelling' && subscriptionEndDate && (
             <p className="mb-4 text-gray-800 dark:text-gray-400">
-              Your premium access will end on {subscriptionEndDate.toLocaleDateString()}.
+              Your premium access will end on {new Date(subscriptionEndDate).toLocaleDateString()}.
             </p>
           )}
-          <UpgradeButton />
+          {subscriptionStatus !== 'cancelling' && <UpgradeButton />}
         </div>
       );
     }
