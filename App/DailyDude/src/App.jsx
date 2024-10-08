@@ -201,66 +201,42 @@ function App() {
     return <div>Loading...</div>;
   }
 
- return (
-  <AuthProvider>
-    <SubscriptionProvider value={{
-      status: subscriptionStatus,
-      endDate: subscriptionEndDate,
-      checkSubscriptionStatus: async () => {
-        if (auth.currentUser) {
-          try {
-            const response = await fetch(`/api/subscription-status?userId=${auth.currentUser.uid}`);
-            if (response.ok) {
-              const data = await response.json();
-              setSubscriptionStatus(data.status);
-              setSubscriptionEndDate(data.endDate);
-              return { status: data.status, endDate: data.endDate };
-            } else {
-              throw new Error('Failed to fetch subscription status');
-            }
-          } catch (error) {
-            console.error('Error checking subscription status:', error);
-            return { status: 'free', endDate: null };
-          }
-        } else {
-          setSubscriptionStatus('free');
-          setSubscriptionEndDate(null);
-          return { status: 'free', endDate: null };
-        }
-      }
-    }}>
-      <Router>
-        <Routes>
-          <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage />} />
-          <Route path="/signup" element={user ? <Navigate to="/dashboard" /> : <SignupPage />} />
-          <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
-          <Route path="/subscription" element={user ? <SubscriptionManager /> : <Navigate to="/login" replace />} />
-          <Route
-            path="/*"
-            element={
-              user ? (
-                <AppLayout
-                  user={user}
-                  darkMode={darkMode}
-                  isSidebarOpen={isSidebarOpen}
-                  toggleSidebar={toggleSidebar}
-                  toggleDarkMode={toggleDarkMode}
-                  isUserMenuOpen={isUserMenuOpen}
-                  toggleUserMenu={toggleUserMenu}
-                  handleLogout={handleLogout}
-                  PremiumCurrencyConverter={PremiumCurrencyConverter}
-                  PremiumWeatherForecast={PremiumWeatherForecast}
-                />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-        </Routes>
-      </Router>
-    </SubscriptionProvider>
-  </AuthProvider>
-);
+  return (
+    <AuthProvider>
+      <SubscriptionProvider value={{ status: subscriptionStatus, isPremium, endDate: subscriptionEndDate }}>
+        <Router>
+          <Routes>
+            <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage />} />
+            <Route path="/signup" element={user ? <Navigate to="/dashboard" /> : <SignupPage />} />
+            <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
+            <Route path="/subscription" element={user ? <SubscriptionManager /> : <Navigate to="/login" replace />} />
+            <Route
+              path="/*"
+              element={
+                user ? (
+                  <AppLayout
+                    user={user}
+                    darkMode={darkMode}
+                    isSidebarOpen={isSidebarOpen}
+                    toggleSidebar={toggleSidebar}
+                    toggleDarkMode={toggleDarkMode}
+                    isUserMenuOpen={isUserMenuOpen}
+                    toggleUserMenu={toggleUserMenu}
+                    handleLogout={handleLogout}
+                    PremiumCurrencyConverter={PremiumCurrencyConverter}
+                    PremiumWeatherForecast={PremiumWeatherForecast}
+                  />
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              }
+            />
+          </Routes>
+        </Router>
+      </SubscriptionProvider>
+    </AuthProvider>
+  );
+}
 
 function AppLayout({ user, darkMode, isSidebarOpen, toggleSidebar, toggleDarkMode, isUserMenuOpen, toggleUserMenu, handleLogout, PremiumCurrencyConverter, PremiumWeatherForecast }) {
   const location = useLocation();
