@@ -56,7 +56,7 @@ const Clock = () => {
     return () => clearInterval(interval);
   }, [checkAlarms]);
 
-  useEffect(() => {
+ useEffect(() => {
     let interval;
     if (isStopwatchRunning) {
       interval = setInterval(() => setStopwatchTime(prev => prev + 10), 10);
@@ -64,7 +64,7 @@ const Clock = () => {
     return () => clearInterval(interval);
   }, [isStopwatchRunning]);
 
-  useEffect(() => {
+ useEffect(() => {
     let interval;
     if (isTimerRunning && timerTime > 0) {
       interval = setInterval(() => setTimerTime(prev => prev - 1), 1000);
@@ -75,7 +75,78 @@ const Clock = () => {
     return () => clearInterval(interval);
   }, [isTimerRunning, timerTime]);
 
-  const playAlarmSound = (soundFile) => {
+  const addAlarm = () => {
+    if (newAlarm.time) {
+      setAlarms([...alarms, { ...newAlarm, id: Date.now() }]);
+      setNewAlarm({ time: '', label: '', sound: 'Alarm.wav' });
+    }
+  };
+
+  const deleteAlarm = (id) => {
+    setAlarms(alarms.filter(alarm => alarm.id !== id));
+    stopAlarm(id);
+  };
+
+  const snoozeAlarm = (id) => {
+    setActiveAlarms(activeAlarms.filter(alarmId => alarmId !== id));
+    const alarm = alarms.find(a => a.id === id);
+    const snoozeTime = new Date();
+    snoozeTime.setMinutes(snoozeTime.getMinutes() + 5);
+    const updatedAlarm = {
+      ...alarm,
+      time: `${snoozeTime.getHours().toString().padStart(2, '0')}:${snoozeTime.getMinutes().toString().padStart(2, '0')}`
+    };
+    setAlarms(alarms.map(a => a.id === id ? updatedAlarm : a));
+    stopAlarmSound();
+  };
+
+  const stopAlarm = (id) => {
+    setActiveAlarms(activeAlarms.filter(alarmId => alarmId !== id));
+    stopAlarmSound();
+  };
+
+  const startStopwatch = () => setIsStopwatchRunning(true);
+  const pauseStopwatch = () => setIsStopwatchRunning(false);
+  const resetStopwatch = () => {
+    setIsStopwatchRunning(false);
+    setStopwatchTime(0);
+  };
+
+  const startTimer = () => {
+    if (timerTime > 0) {
+      setIsTimerRunning(true);
+    }
+  };
+  
+  const pauseTimer = () => setIsTimerRunning(false);
+  
+  const resetTimer = () => {
+    setIsTimerRunning(false);
+    setTimerTime(0);
+    setTimerInput({ hours: 0, minutes: 0, seconds: 0 });
+    stopTimerSound();
+  };
+
+  const setTimerPreset = (time) => {
+    setTimerTime(time);
+    setTimerInput({
+      hours: Math.floor(time / 3600),
+      minutes: Math.floor((time % 3600) / 60),
+      seconds: time % 60
+    });
+  };
+
+  const handleTimerInputChange = (e) => {
+    const { name, value } = e.target;
+    setTimerInput({ ...timerInput, [name]: parseInt(value) || 0 });
+  };
+
+  const setCustomTimer = () => {
+    const totalSeconds = timerInput.hours * 3600 + timerInput.minutes * 60 + timerInput.seconds;
+    setTimerTime(totalSeconds);
+  };
+
+const playAlarmSound = (soundFile) => {
     stopAlarmSound();
     const sound = alarmSoundsRef.current[soundFile];
     if (sound) {
@@ -84,7 +155,7 @@ const Clock = () => {
     }
   };
 
-  const stopAlarmSound = () => {
+ const stopAlarmSound = () => {
     Object.values(alarmSoundsRef.current).forEach(sound => {
       sound.pause();
       sound.currentTime = 0;
@@ -95,7 +166,7 @@ const Clock = () => {
     timerSoundRef.current.play().catch(error => console.error('Failed to play timer sound:', error));
   };
 
-  const stopTimerSound = () => {
+ const stopTimerSound = () => {
     timerSoundRef.current.pause();
     timerSoundRef.current.currentTime = 0;
   };
