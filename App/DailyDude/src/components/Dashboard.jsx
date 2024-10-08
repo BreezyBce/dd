@@ -38,6 +38,8 @@ const Dashboard = ({ expenses = [] }) => {
   const [todayExpenses, setTodayExpenses] = useState([]);
   const [isPremium, setIsPremium] = useState(false);
   const location = useLocation();
+  const [widgets, setWidgets] = useState([]);
+
 
  useEffect(() => {
     const handlePostCheckoutRedirect = async () => {
