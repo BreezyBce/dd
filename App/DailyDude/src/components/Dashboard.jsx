@@ -31,15 +31,6 @@ const Dashboard = ({ expenses = [] }) => {
   const [notes, setNotes] = useState([]);
   const [events, setEvents] = useState([]);
   const currentDate = new Date();
-  
-  const [widgets, setWidgets] = useState([
-  { id: 'todo', type: 'TodoList', size: 'full' },
-    { id: 'events', type: 'EventsList', size: 'half' },
-    { id: 'expenses', type: 'ExpensesSummary', size: 'half' },
-    { id: 'calculator', type: 'Calculator', size: 'third' },
-    { id: 'currency', type: 'CurrencyConverter', size: 'third' },
-    { id: 'translator', type: 'Translator', size: 'third' },
-  ]);
   const [deletedWidgets, setDeletedWidgets] = useState([]);
   const [showAddWidget, setShowAddWidget] = useState(false);
   const widgetRefs = useRef({});
@@ -104,46 +95,45 @@ const Dashboard = ({ expenses = [] }) => {
 
 
     const fetchDashboardLayout = async (userId) => {
-      setIsLoading(true);
-      try {
-        const docRef = doc(db, 'dashboardLayouts', userId);
-        const docSnap = await getDoc(docRef);
+  setIsLoading(true);
+  try {
+    const docRef = doc(db, 'dashboardLayouts', userId);
+    const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists()) {
-          setWidgets(docSnap.data().widgets);
-        } else {
-          const defaultWidgets = [
-            { id: 'todo', type: 'TodoList', size: 'full' },
-            { id: 'events', type: 'EventsList', size: 'third' },
-            { id: 'expenses', type: 'ExpensesSummary', size: 'third' },
-            { id: 'calculator', type: 'Calculator', size: 'third' },
-            { id: 'currency', type: 'CurrencyConverter', size: 'third' },
-            { id: 'translator', type: 'Translator', size: 'third' },
-          ];
-          setWidgets(defaultWidgets);
-          await setDoc(docRef, { widgets: defaultWidgets });
-        }
-      } catch (error) {
-        console.error("Error fetching dashboard layout:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (docSnap.exists()) {
+      setWidgets(docSnap.data().widgets);
+    } else {
+      const defaultWidgets = [
+        { id: 'todo', type: 'TodoList', size: 'full' },
+        { id: 'events', type: 'EventsList', size: 'third' },
+        { id: 'expenses', type: 'ExpensesSummary', size: 'third' },
+        { id: 'calculator', type: 'Calculator', size: 'third' },
+        { id: 'currency', type: 'CurrencyConverter', size: 'third' },
+        { id: 'translator', type: 'Translator', size: 'third' },
+      ];
+      setWidgets(defaultWidgets);
+      await setDoc(docRef, { widgets: defaultWidgets });
+    }
+  } catch (error) {
+    console.error("Error fetching dashboard layout:", error);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
 
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        await fetchDashboardLayout(user.uid);
-      } else {
-        setWidgets([]);
-        setIsLoading(false);
-      }
-    });
+ useEffect(() => {
+  const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      await fetchDashboardLayout(user.uid);
+    } else {
+      setWidgets([]);
+      setIsLoading(false);
+    }
+  });
 
-    return () => unsubscribe();
-  }, []);
-
+  return () => unsubscribe();
+}, []);
 
   
   useEffect(() => {
@@ -281,13 +271,23 @@ useEffect(() => {
     });
   };
 
-  const onDragEnd = (result) => {
-    if (!result.destination) return;
-    const newWidgets = Array.from(widgets);
-    const [reorderedItem] = newWidgets.splice(result.source.index, 1);
-    newWidgets.splice(result.destination.index, 0, reorderedItem);
-    setWidgets(newWidgets);
-  };
+ const onDragEnd = async (result) => {
+  if (!result.destination) return;
+  const newWidgets = Array.from(widgets);
+  const [reorderedItem] = newWidgets.splice(result.source.index, 1);
+  newWidgets.splice(result.destination.index, 0, reorderedItem);
+  setWidgets(newWidgets);
+
+  // Save the new layout to Firestore
+  if (auth.currentUser) {
+    try {
+      const docRef = doc(db, 'dashboardLayouts', auth.currentUser.uid);
+      await setDoc(docRef, { widgets: newWidgets }, { merge: true });
+    } catch (error) {
+      console.error("Error saving dashboard layout:", error);
+    }
+  }
+};
 
   // Add this new function to get all available widget types
   const getAllWidgetTypes = () => {
@@ -296,18 +296,37 @@ useEffect(() => {
     return [...new Set([...currentTypes, ...deletedTypes])];
   };
 
-  const addWidget = (widgetType) => {
-    const newWidget = { id: `${widgetType}-${Date.now()}`, type: widgetType, size: 'third' };
-    setWidgets([...widgets, newWidget]);
-    setShowAddWidget(false);
-  };
+ const addWidget = async (widgetType) => {
+  const newWidget = { id: `${widgetType}-${Date.now()}`, type: widgetType, size: 'third' };
+  const updatedWidgets = [...widgets, newWidget];
+  setWidgets(updatedWidgets);
+  setShowAddWidget(false);
 
-  const deleteWidget = (id, type) => {
-    const widgetToDelete = widgets.find(w => w.id === id);
-    const newWidgets = widgets.filter(w => w.id !== id);
-    setWidgets(newWidgets);
-    setDeletedWidgets([...deletedWidgets, { ...widgetToDelete, id: `${type}-${Date.now()}` }]);
-  };
+  if (auth.currentUser) {
+    try {
+      const docRef = doc(db, 'dashboardLayouts', auth.currentUser.uid);
+      await setDoc(docRef, { widgets: updatedWidgets }, { merge: true });
+    } catch (error) {
+      console.error("Error saving dashboard layout:", error);
+    }
+  }
+};
+
+ const deleteWidget = async (id, type) => {
+  const widgetToDelete = widgets.find(w => w.id === id);
+  const newWidgets = widgets.filter(w => w.id !== id);
+  setWidgets(newWidgets);
+  setDeletedWidgets([...deletedWidgets, { ...widgetToDelete, id: `${type}-${Date.now()}` }]);
+
+  if (auth.currentUser) {
+    try {
+      const docRef = doc(db, 'dashboardLayouts', auth.currentUser.uid);
+      await setDoc(docRef, { widgets: newWidgets }, { merge: true });
+    } catch (error) {
+      console.error("Error saving dashboard layout:", error);
+    }
+  }
+};
 
   const changeWidgetSize = (id) => {
     setWidgets(widgets.map(widget => {
