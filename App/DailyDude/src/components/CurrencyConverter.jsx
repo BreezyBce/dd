@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import withSubscription from '../withSubscription';
+import { useSubscription } from '../SubscriptionContext';
+import UpgradeButton from './UpgradeButton';
 
 const CurrencyConverter = () => {
   const [amount, setAmount] = useState(1);
