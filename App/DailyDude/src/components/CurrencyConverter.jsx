@@ -60,7 +60,19 @@ const fetchExchangeRate = async () => {
     setToCurrency(fromCurrency);
   };
 
-  if (subscriptionStatus !== 'premium') {
+  const hasPremiumAccess = (subscriptionStatus, subscriptionEndDate) => {
+  if (subscriptionStatus === 'premium') {
+    return true;
+  }
+  if (subscriptionStatus === 'cancelling' && subscriptionEndDate) {
+    const endDate = new Date(subscriptionEndDate);
+    const now = new Date();
+    return now < endDate;
+  }
+  return false;
+};
+
+if (!hasPremiumAccess(subscriptionStatus, subscriptionEndDate)) {
     return (
       <div className="max-w-md mx-auto p-6 bg-white rounded-lg dark:bg-dark-background-2 text-gray-800 dark:text-gray-400">
         <h2 className="text-2xl font-bold mb-6">Currency Converter</h2>
@@ -71,6 +83,8 @@ const fetchExchangeRate = async () => {
       </div>
     );
   }
+
+  } else {
 
   return (
     <div className="max-w-md mx-auto p-6 bg-white rounded-lg dark:bg-dark-background-2 text-gray-800 dark:text-gray-400">
