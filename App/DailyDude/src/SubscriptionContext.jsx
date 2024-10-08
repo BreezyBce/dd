@@ -30,7 +30,8 @@ export const SubscriptionProvider = ({ children }) => {
             // Update status to 'free' if end date has passed
             await updateDoc(doc(db, 'users', user.uid), {
               subscriptionStatus: 'free',
-              subscriptionEndDate: null
+              subscriptionEndDate: null,
+              isPremium: false
             });
             setSubscriptionStatus('free');
             setSubscriptionEndDate(null);
@@ -47,7 +48,10 @@ export const SubscriptionProvider = ({ children }) => {
   const updateSubscriptionStatus = async (newStatus, newEndDate = null) => {
     const user = auth.currentUser;
     if (user) {
-      const updateData = { subscriptionStatus: newStatus };
+      const updateData = { 
+        subscriptionStatus: newStatus,
+        isPremium: newStatus === 'premium' || (newStatus === 'cancelling' && newEndDate && new Date() < new Date(newEndDate))
+      };
       if (newEndDate) {
         updateData.subscriptionEndDate = newEndDate;
       }
