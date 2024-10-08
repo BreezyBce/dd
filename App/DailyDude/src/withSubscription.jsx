@@ -6,7 +6,7 @@ const withSubscription = (WrappedComponent, requiredPlan = 'free') => {
   return function WithSubscriptionComponent(props) {
     const { subscriptionStatus, isPremium, subscriptionEndDate, checkSubscriptionStatus } = useSubscription();
     const [isLoading, setIsLoading] = useState(true);
- 
+
     useEffect(() => {
       const fetchStatus = async () => {
         await checkSubscriptionStatus();
@@ -19,7 +19,7 @@ const withSubscription = (WrappedComponent, requiredPlan = 'free') => {
       return <div>Loading...</div>;
     }
 
-    if (isPremium || (requiredPlan === 'free' && subscriptionStatus === 'free')) {
+    if (isPremium || requiredPlan === 'free') {
       return <WrappedComponent {...props} />;
     } else {
       return (
