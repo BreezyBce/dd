@@ -67,8 +67,8 @@ const LoginPage = () => {
         </form>
         <div className="mt-4 text-center text-sm text-gray-600">
           <p>Or login with</p>
-          <div className="flex justify-center mt-2 space-x-4">
-            <button onClick={handleGoogleLogin} className="flex items-center border px-4 py-2 rounded-md hover:bg-gray-50">
+          <div className="flex justify-center mt-4 space-x-4">
+            <button onClick={handleGoogleLogin} className="w-full bg-white text-gray-700 py-2 px-4 rounded-md border border-gray-300 hover:bg-gray-100 flex items-center justify-center">
               <FaGoogle className="mr-2" /> Log in with Google 
             </button>
           </div>
