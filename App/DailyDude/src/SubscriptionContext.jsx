@@ -2,9 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
-
 const SubscriptionContext = createContext();
-
 
 export const SubscriptionProvider = ({ children }) => {
   const [subscriptionStatus, setSubscriptionStatus] = useState('free');
@@ -46,7 +44,12 @@ export const SubscriptionProvider = ({ children }) => {
       await updateDoc(doc(db, 'users', user.uid), updateData);
       setSubscriptionStatus(newStatus);
       setSubscriptionEndDate(newEndDate);
-      setIsPremium(newStatus === 'premium' || (newStatus === 'cancelling' && newEndDate && new Date() < newEndDate));
+      
+      const now = new Date();
+      setIsPremium(
+        newStatus === 'premium' || 
+        (newStatus === 'cancelling' && newEndDate && now < newEndDate)
+      );
     }
   };
 
