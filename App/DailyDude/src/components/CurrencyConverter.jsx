@@ -4,7 +4,6 @@ import { useSubscription } from '../SubscriptionContext';
 import withSubscription from '../withSubscription';
 import UpgradeButton from './UpgradeButton'; // Import the UpgradeButton component
 
-
 const CurrencyConverter = () => {
   const [amount, setAmount] = useState(1);
   const [fromCurrency, setFromCurrency] = useState('USD');
@@ -14,7 +13,6 @@ const CurrencyConverter = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const { subscriptionStatus } = useSubscription();
-  
 
   const API_BASE_URL = '/api';
 
