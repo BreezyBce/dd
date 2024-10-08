@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import withSubscription from '../withSubscription';
+import { useSubscription } from '../SubscriptionContext';
 import UpgradeButton from './UpgradeButton'; // Import the UpgradeButton component
 
 const CurrencyConverter = () => {
@@ -128,7 +129,6 @@ const fetchExchangeRate = async () => {
         </div>
       )}
     </div>
-  );
 };
 
 export default withSubscription(CurrencyConverter, 'premium');
