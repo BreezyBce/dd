@@ -132,7 +132,7 @@ const SignupPage = () => {
             className="w-full bg-customorange-500 text-white py-2 rounded-md hover:bg-customorange-400"
             disabled={!isOnline}
           >
-            Sign Up
+            SIGN UP
           </button>
         </form>
         <div className="mt-4 text-center text-sm text-gray-600">
