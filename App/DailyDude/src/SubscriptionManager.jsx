@@ -130,43 +130,21 @@ const SubscriptionManager = () => {
 };
 
  const handleDowngrade = async () => {
-    if (!currentUser) {
-      setError('No user logged in. Please log in to downgrade.');
-      return;
-    }
-
     setLoading(true);
-    setError(null);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/subscription-status`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'downgrade',
-          userId: currentUser.uid,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to downgrade subscription');
-      }
-
-      await checkUserSubscription(currentUser.uid);
-      setError(null);
+      await updateSubscriptionStatus('cancelling', subscriptionEndDate);
+      // Refresh the subscription status after downgrade
+      await checkSubscriptionStatus();
     } catch (error) {
-      console.error('Error:', error);
-      setError(error.message || 'Failed to downgrade subscription. Please try again.');
-    } finally {
-      setLoading(false);
+      setError('Failed to downgrade subscription. Please try again.');
     }
+    setLoading(false);
   };
 
-     const renderSubscriptionMessage = () => {
+    const renderSubscriptionMessage = () => {
     if (isPremium) {
       if (subscriptionStatus === 'cancelling' && subscriptionEndDate) {
-        return `Your subscription has been cancelled. You can still access premium features until ${new Date(subscriptionEndDate).toLocaleDateString()}.`;
+        return `You cancelled your subscription but your premium features are still active until ${new Date(subscriptionEndDate).toLocaleDateString()}.`;
       } else {
         return "You are currently on the Premium plan.";
       }
@@ -175,16 +153,16 @@ const SubscriptionManager = () => {
     }
   };
 
-  return (
+ return (
     <div className="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-xl dark:bg-gray-800">
       <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">Subscription Management</h1>
 
-       <div className="mb-8">
+      <div className="mb-8">
         <h2 className="text-xl font-semibold mb-2 text-gray-700 dark:text-gray-300">Current Plan</h2>
         <p className="text-lg text-gray-600 dark:text-gray-400">
           {renderSubscriptionMessage()}
         </p>
-        {isPremiumActive && <p className="text-sm text-green-500 mt-2">Premium features are currently active.</p>}
+        {isPremium && <p className="text-sm text-green-500 mt-2">Premium features are currently active.</p>}
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
@@ -195,7 +173,7 @@ const SubscriptionManager = () => {
             <li>Limited usage</li>
             <li>Standard support</li>
           </ul>
-          {subscriptionStatus === 'premium' && (
+          {isPremium && subscriptionStatus !== 'cancelling' && (
             <button
               onClick={handleDowngrade}
               disabled={loading}
@@ -213,7 +191,7 @@ const SubscriptionManager = () => {
             <li>Unlimited usage</li>
             <li>Priority support</li>
           </ul>
-          {subscriptionStatus === 'free' && (
+          {!isPremium && (
             <button
               onClick={handleUpgrade}
               disabled={loading}
