@@ -41,6 +41,7 @@ function App() {
   const PremiumCurrencyConverter = withSubscription(CurrencyConverter, 'premium');
   const PremiumWeatherForecast = withSubscription(WeatherForecast, 'premium');
 
+  
 useEffect(() => {
     const checkSubscription = async () => {
       if (auth.currentUser) {
