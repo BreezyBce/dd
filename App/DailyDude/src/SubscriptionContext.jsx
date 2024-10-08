@@ -2,7 +2,9 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
+
 const SubscriptionContext = createContext();
+
 
 export const SubscriptionProvider = ({ children }) => {
   const [subscriptionStatus, setSubscriptionStatus] = useState('free');
