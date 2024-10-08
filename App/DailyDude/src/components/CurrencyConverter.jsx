@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useSubscription } from '../SubscriptionContext';
 import withSubscription from '../withSubscription';
 import UpgradeButton from './UpgradeButton'; // Import the UpgradeButton component
 
