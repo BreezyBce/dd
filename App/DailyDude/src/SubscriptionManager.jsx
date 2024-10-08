@@ -3,30 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { useSubscription } from './SubscriptionContext';
-import { createCheckoutSession, cancelSubscription } from './services/stripe';
-import { checkUserExistence } from './firestoreUtils';
-import { updateSubscriptionStatus } from './subscriptionService';
-
 
 const SubscriptionManager = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { subscriptionStatus, updateSubscriptionStatus } = useSubscription();
+  const { subscriptionStatus, isPremium, subscriptionEndDate, updateSubscriptionStatus, checkSubscriptionStatus } = useSubscription();
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
-  const [subscriptionEndDate, setSubscriptionEndDate] = useState(null);
-  const [isPremiumActive, setIsPremiumActive, isPremium] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
       setCurrentUser(user);
       if (user) {
-        checkUserSubscription(user.uid);
+        checkSubscriptionStatus();
       }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [checkSubscriptionStatus]);
 
   useEffect(() => {
     const checkSubscriptionStatus = () => {
@@ -129,11 +123,10 @@ const SubscriptionManager = () => {
   }
 };
 
- const handleDowngrade = async () => {
+const handleDowngrade = async () => {
     setLoading(true);
     try {
       await updateSubscriptionStatus('cancelling', subscriptionEndDate);
-      // Refresh the subscription status after downgrade
       await checkSubscriptionStatus();
     } catch (error) {
       setError('Failed to downgrade subscription. Please try again.');
@@ -141,19 +134,17 @@ const SubscriptionManager = () => {
     setLoading(false);
   };
 
-    const renderSubscriptionMessage = () => {
-    if (isPremium) {
-      if (subscriptionStatus === 'cancelling' && subscriptionEndDate) {
-        return `You cancelled your subscription but your premium features are still active until ${new Date(subscriptionEndDate).toLocaleDateString()}.`;
-      } else {
-        return "You are currently on the Premium plan.";
-      }
+  const renderSubscriptionMessage = () => {
+    if (subscriptionStatus === 'premium') {
+      return "You are currently on the Premium plan.";
+    } else if (subscriptionStatus === 'cancelling' && subscriptionEndDate) {
+      return `You cancelled your subscription but your premium features are still active until ${new Date(subscriptionEndDate).toLocaleDateString()}.`;
     } else {
       return "You are currently on the Free plan.";
     }
   };
 
- return (
+return (
     <div className="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-xl dark:bg-gray-800">
       <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">Subscription Management</h1>
 
