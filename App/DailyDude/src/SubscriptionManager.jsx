@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { useSubscription } from './SubscriptionContext';
+import { createCheckoutSession, cancelSubscription } from './services/stripe';
+import { checkUserExistence } from './firestoreUtils';
 
 const SubscriptionManager = () => {
   const [loading, setLoading] = useState(false);
@@ -22,111 +24,68 @@ const SubscriptionManager = () => {
     return () => unsubscribe();
   }, [checkSubscriptionStatus]);
 
-  useEffect(() => {
-    const checkSubscriptionStatus = () => {
-      if (subscriptionStatus === 'cancelling' && subscriptionEndDate) {
-        const now = new Date();
-        if (now > subscriptionEndDate) {
-          updateSubscriptionStatus('free');
-          setIsPremiumActive(false);
-        } else {
-          setIsPremiumActive(true);
-        }
-      } else if (subscriptionStatus === 'premium') {
-        setIsPremiumActive(true);
-      } else {
-        setIsPremiumActive(false);
-      }
-    };
+  const handleUpgrade = async () => {
+    if (!currentUser) {
+      setError('No user logged in. Please log in to upgrade.');
+      return;
+    }
 
-    checkSubscriptionStatus();
+    setLoading(true);
+    setError(null);
 
-    const intervalId = setInterval(checkSubscriptionStatus, 60000); // Check every minute
-
-    return () => clearInterval(intervalId);
-  }, [subscriptionStatus, subscriptionEndDate]);
-
-  const checkUserSubscription = async (userId) => {
     try {
-      const userDoc = await getDoc(doc(db, 'users', userId));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        updateSubscriptionStatus(userData.subscriptionStatus || 'free');
-        if (userData.subscriptionEndDate) {
-          const endDate = userData.subscriptionEndDate.toDate();
-          setSubscriptionEndDate(endDate);
-          if (userData.subscriptionStatus === 'cancelling' && new Date() > endDate) {
-            await updateDoc(doc(db, 'users', userId), { subscriptionStatus: 'free' });
-            updateSubscriptionStatus('free');
-          }
-        }
+      console.log('Starting upgrade process');
+      console.log('Current user:', currentUser.uid);
+
+      const userExists = await checkUserExistence(currentUser.uid);
+      console.log('User exists:', userExists);
+
+      if (!userExists) {
+        throw new Error('User data not found in database');
       }
-    } catch (error) {
-      console.error('Error checking user subscription:', error);
+
+      console.log('Creating checkout session');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId: 'price_1PxwpuA9AcwovfpkLQxWKcJo',
+          userId: currentUser.uid,
+        }),
+      });
+
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const textResponse = await response.text();
+        console.error('Error response:', textResponse);
+        throw new Error(`HTTP error! status: ${response.status}, message: ${textResponse}`);
+      }
+
+      const data = await response.json();
+      console.log('Response data:', data);
+
+      if (data.url) {
+        console.log('Redirecting to:', data.url);
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
+    } catch (err) {
+      console.error('Error in handleUpgrade:', err);
+      setError(err.message || 'Failed to create checkout session. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleUpgrade = async () => {
-  if (!currentUser) {
-    setError('No user logged in. Please log in to upgrade.');
-    return;
-  }
-
-  setLoading(true);
-  setError(null);
-
-  try {
-    console.log('Starting upgrade process');
-    console.log('Current user:', currentUser.uid);
-
-    const userExists = await checkUserExistence(currentUser.uid);
-    console.log('User exists:', userExists);
-
-    if (!userExists) {
-      throw new Error('User data not found in database');
-    }
-
-    console.log('Creating checkout session');
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/create-checkout-session`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        priceId: 'price_1PxwpuA9AcwovfpkLQxWKcJo',
-        userId: currentUser.uid,
-      }),
-    });
-
-    console.log('Response status:', response.status);
-    
-    if (!response.ok) {
-      const textResponse = await response.text();
-      console.error('Error response:', textResponse);
-      throw new Error(`HTTP error! status: ${response.status}, message: ${textResponse}`);
-    }
-
-    const data = await response.json();
-    console.log('Response data:', data);
-
-    if (data.url) {
-      console.log('Redirecting to:', data.url);
-      window.location.href = data.url;
-    } else {
-      throw new Error('No checkout URL received');
-    }
-  } catch (err) {
-    console.error('Error in handleUpgrade:', err);
-    setError(err.message || 'Failed to create checkout session. Please try again.');
-  } finally {
-    setLoading(false);
-  }
-};
-
-const handleDowngrade = async () => {
+  const handleDowngrade = async () => {
     setLoading(true);
     try {
       await updateSubscriptionStatus('cancelling', subscriptionEndDate);
+      // Refresh the subscription status after downgrade
       await checkSubscriptionStatus();
     } catch (error) {
       setError('Failed to downgrade subscription. Please try again.');
@@ -144,7 +103,7 @@ const handleDowngrade = async () => {
     }
   };
 
-return (
+  return (
     <div className="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-xl dark:bg-gray-800">
       <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-white">Subscription Management</h1>
 
