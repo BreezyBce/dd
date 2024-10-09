@@ -106,12 +106,12 @@ const Dashboard = ({ expenses = [] }) => {
       setWidgets(docSnap.data().widgets);
     } else {
       const defaultWidgets = [
-        { id: 'todo', type: 'TodoList', size: 'full' },
+        { id: 'todo', type: 'TodoList', size: 'third' },
         { id: 'events', type: 'EventsList', size: 'third' },
         { id: 'expenses', type: 'ExpensesSummary', size: 'third' },
-        { id: 'calculator', type: 'Calculator', size: 'third' },
-        { id: 'currency', type: 'CurrencyConverter', size: 'third' },
-        { id: 'translator', type: 'Translator', size: 'third' },
+        { id: 'calculator', type: 'Calculator', size: 'half' },
+        { id: 'currency', type: 'CurrencyConverter', size: 'half' },
+        { id: 'translator', type: 'Translator', size: 'full' },
       ];
       setWidgets(defaultWidgets);
       await setDoc(docRef, { widgets: defaultWidgets });
