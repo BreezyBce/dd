@@ -7,6 +7,9 @@ import * as XLSX from 'xlsx';
 import "react-datepicker/dist/react-datepicker.css";
 import { db, auth } from '../firebase';
 import { collection, addDoc, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import withSubscription from '../withSubscription';
+import { useSubscription } from '../SubscriptionContext';
+import UpgradeButton from './UpgradeButton';
 
 
 Modal.setAppElement('#root');
@@ -29,7 +32,9 @@ const ExpenseTracker = () => {
   const [dateRange, setDateRange] = useState([new Date(new Date().getFullYear(), new Date().getMonth(), 1), new Date()]);
   const [newCategory, setNewCategory] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { subscriptionStatus } = useSubscription();
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpenses: 0, balance: 0, transactions: 0 });
+
 
   useEffect(() => {
     // Clear all transactions
@@ -52,8 +57,12 @@ const ExpenseTracker = () => {
     localStorage.setItem('currency', currency);
   }, [expenses, incomes, categories, currency]);
 
-    const addTransaction = async (transaction) => {
-      const newTransactionWithId = { ...transaction, id: Date.now(), amount: parseFloat(transaction.amount) };
+  const addTransaction = async (transaction) => {
+    if (subscriptionStatus !== 'premium' && expenses.length + incomes.length >= 10) {
+      alert('You have reached the limit for free users. Please upgrade to add more transactions.');
+      return;
+    }
+  const newTransactionWithId = { ...transaction, id: Date.now(), amount: parseFloat(transaction.amount) };
       
      
       try {
@@ -212,13 +221,19 @@ const ExpenseTracker = () => {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#A4DE6C', '#D0ED57', '#FAD000', '#F0E68C'];
 
-              const renderDashboard = () => {
-                const summary = getSummary();
-                const financialStats = getFinancialStatistics();
+    const renderDashboard = () => {
+    const summary = getSummary();
+    const financialStats = getFinancialStatistics();
 
                 return (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {subscriptionStatus !== 'premium' && (
             <div className="col-span-1 md:col-span-4 flex justify-between items-center mb-4">
+               <h3 className="text-lg font-bold">Upgrade to Premium</h3>
+            <p className="mt-2">Unlock unlimited transactions and advanced features!</p>
+            <UpgradeButton />
+          </div>
+        )}
               <DatePicker
                 selectsRange={true}
                 startDate={dateRange[0]}
@@ -553,4 +568,4 @@ const ExpenseTracker = () => {
   );
   };
 
-  export default ExpenseTracker;
+export default withSubscription(ExpenseTracker, 'premium');
