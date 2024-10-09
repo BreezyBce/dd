@@ -370,7 +370,7 @@ const ExpenseTracker = () => {
         {subscriptionStatus !== 'premium' && (
           <div className="col-span-1 md:col-span-4 bg-yellow-100 p-4 rounded-lg shadow text-yellow-800">
             <h3 className="text-lg font-bold">Upgrade to Premium</h3>
-            <p className="mt-2">Unlock unlimited transactions and advanced features!</p>
+            <p className="mt-2">You cancelled your premium subscription. Unlock unlimited transactions and advanced features with Premium!</p>
             <UpgradeButton />
           </div>
         )}
@@ -570,7 +570,7 @@ const ExpenseTracker = () => {
 
       {subscriptionStatus !== 'premium' && (
         <div className="mt-4 p-4 bg-yellow-100 rounded-lg">
-          <p className="text-yellow-800">You are using the free version. Upgrade to premium for unlimited transactions and advanced features.</p>
+          <p className="text-yellow-800">You cancelled your premium subscription, you will have limited access. Upgrade to premium for unlimited transactions and advanced features.</p>
           <UpgradeButton />
         </div>
       )}
