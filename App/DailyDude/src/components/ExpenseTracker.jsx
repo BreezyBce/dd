@@ -564,7 +564,7 @@ const ExpenseTracker = () => {
       {subscriptionStatus !== 'premium' && (
         <div className="mt-4 p-4 bg-yellow-100 rounded-lg">
           <h3 className="text-lg font-bold">Upgrade to Premium</h3>
-          <p className="text-yellow-800">You cancelled your premium subscription, you will have limited access. Upgrade to premium for unlimited transactions and advanced features.</p>
+          <p className="text-yellow-800 mb-10">You cancelled your premium subscription, you will have limited access. Upgrade to premium for unlimited transactions and advanced features.</p>
           <UpgradeButton />
         </div>
       )}
