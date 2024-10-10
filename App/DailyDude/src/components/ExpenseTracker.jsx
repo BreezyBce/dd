@@ -110,104 +110,44 @@ const ExpenseTracker = () => {
     return { totalIncome, totalExpenses, balance, transactions };
   };
 
- const deleteTransaction = async (id, type) => {
-  console.log(`Attempting to delete transaction: ${id}, type: ${type}`);
-  
-  try {
-    // Attempt to delete from Firestore
-    await deleteDoc(doc(db, 'transactions', id));
-    console.log(`Document deleted from Firestore: ${id}`);
+  const deleteTransaction = async (id, type) => {
+    try {
+      await deleteDoc(doc(db, 'transactions', id));
 
-    // Update local state
-    if (type === 'expense') {
-      setExpenses(prevExpenses => {
-        console.log('Previous expenses:', prevExpenses);
-        const newExpenses = prevExpenses.filter(expense => expense.id !== id);
-        console.log('New expenses after deletion:', newExpenses);
-        return newExpenses;
-      });
-    } else {
-      setIncomes(prevIncomes => {
-        console.log('Previous incomes:', prevIncomes);
-        const newIncomes = prevIncomes.filter(income => income.id !== id);
-        console.log('New incomes after deletion:', newIncomes);
-        return newIncomes;
-      });
+      if (type === 'expense') {
+        setExpenses(prevExpenses => prevExpenses.filter(expense => expense.id !== id));
+      } else {
+        setIncomes(prevIncomes => prevIncomes.filter(income => income.id !== id));
+      }
+    } catch (error) {
+      console.error("Error deleting transaction: ", error);
     }
+  };
 
-    console.log(`Transaction ${id} deleted successfully`);
-
-    // Refresh transactions after deletion
-    fetchTransactions();
-  } catch (error) {
-    console.error("Error deleting transaction: ", error);
-  }
-};
-
-useEffect(() => {
-  const fetchTransactions = async () => {
-    if (auth.currentUser) {
-      try {
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      if (auth.currentUser) {
         const q = query(collection(db, 'transactions'), where("userId", "==", auth.currentUser.uid));
         const querySnapshot = await getDocs(q);
         const fetchedTransactions = querySnapshot.docs.map(doc => ({
-          id: doc.id, // Ensure we're using the Firestore document ID
+          id: doc.id,
           ...doc.data(),
           date: doc.data().date.toDate(),
         }));
 
-        console.log('Fetched transactions:', fetchedTransactions);
+        setExpenses(fetchedTransactions.filter(t => t.type === 'expense'));
+        setIncomes(fetchedTransactions.filter(t => t.type === 'income'));
 
-        const fetchedExpenses = fetchedTransactions.filter(t => t.type === 'expense');
-        const fetchedIncomes = fetchedTransactions.filter(t => t.type === 'income');
-
-        console.log('Setting expenses:', fetchedExpenses);
-        console.log('Setting incomes:', fetchedIncomes);
-
-        setExpenses(fetchedExpenses);
-        setIncomes(fetchedIncomes);
-
-        const summary = getSummaryForTransactions(fetchedExpenses, fetchedIncomes);
+        const summary = getSummaryForTransactions(
+          fetchedTransactions.filter(t => t.type === 'expense'),
+          fetchedTransactions.filter(t => t.type === 'income')
+        );
         setSummary(summary);
-      } catch (error) {
-        console.error('Error fetching transactions:', error);
       }
-    }
-  };
+    };
 
-  fetchTransactions();
-}, []);
-
-  const fetchTransactions = async () => {
-  if (auth.currentUser) {
-    try {
-      const q = query(collection(db, 'transactions'), where("userId", "==", auth.currentUser.uid));
-      const querySnapshot = await getDocs(q);
-      const fetchedTransactions = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        date: doc.data().date.toDate(),
-      }));
-
-      console.log('Fetched transactions:', fetchedTransactions);
-
-      const fetchedExpenses = fetchedTransactions.filter(t => t.type === 'expense');
-      const fetchedIncomes = fetchedTransactions.filter(t => t.type === 'income');
-
-      console.log('Setting expenses:', fetchedExpenses);
-      console.log('Setting incomes:', fetchedIncomes);
-
-      setExpenses(fetchedExpenses);
-      setIncomes(fetchedIncomes);
-
-      const summary = getSummaryForTransactions(fetchedExpenses, fetchedIncomes);
-      setSummary(summary);
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-    }
-  }
-};
-
+    fetchTransactions();
+  }, []);
 
   const getTransactionsInDateRange = () => {
     const [start, end] = dateRange;
@@ -279,171 +219,157 @@ useEffect(() => {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#A4DE6C', '#D0ED57', '#FAD000', '#F0E68C'];
 
- const renderDashboard = () => {
-  const summary = getSummary();
-  const financialStats = getFinancialStatistics();
+  const renderDashboard = () => {
+    const summary = getSummary();
+    const financialStats = getFinancialStatistics();
 
-  console.log('Rendering dashboard');
-  console.log('Current expenses:', expenses);
-  console.log('Current incomes:', incomes);
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div className="col-span-1 md:col-span-4 flex justify-between items-center mb-4">
-        <DatePicker
-          selectsRange={true}
-          startDate={dateRange[0]}
-          endDate={dateRange[1]}
-          onChange={(update) => {
-            setDateRange(update);
-            const newSummary = getSummaryForTransactions(expenses, incomes);
-            setSummary(newSummary);
-          }}
-          className="p-2 rounded bg-white text-gray-800 border border-gray-300"
-        />
-      </div>
-      <div className="bg-white p-4 rounded-lg shadow dark:bg-dark-background text-gray-800 dark:text-gray-400">
-        <h3 className="text-lg font-bold">Income</h3>
-        <p className="text-2xl font-bold text-green-500">{summary.totalIncome.toFixed(2)} {currency}</p>
-      </div>
-      <div className="bg-white p-4 rounded-lg shadow dark:bg-dark-background text-gray-800 dark:text-gray-400">
-        <h3 className="text-lg font-bold">Expenses</h3>
-        <p className="text-2xl font-bold text-red-500">{summary.totalExpenses.toFixed(2)} {currency}</p>
-      </div>
-      <div className="bg-white p-4 rounded-lg shadow dark:bg-dark-background text-gray-800 dark:text-gray-400">
-        <h3 className="text-lg font-bold">Balance</h3>
-        <p className="text-2xl font-bold text-blue-500">{summary.balance.toFixed(2)} {currency}</p>
-      </div>
-      <div className="bg-white p-4 rounded-lg shadow dark:bg-dark-background text-gray-800 dark:text-gray-400">
-        <h3 className="text-lg font-bold">Transactions</h3>
-        <p className="text-2xl font-bold text-purple-500">{summary.transactions}</p>
-      </div>
-      <div className="col-span-1 md:col-span-4 bg-white p-4 rounded-lg shadow text-gray-800 dark:text-gray-400 dark:bg-dark-background">
-        <h3 className="text-xl font-bold mb-4">Financial Statistics</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={financialStats}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="Income" fill="#34D399" />
-            <Bar dataKey="Expenses" fill="#F87171" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="col-span-1 md:col-span-2 bg-white p-4 rounded-lg shadow text-gray-800 dark:text-gray-400 dark:bg-dark-background">
-        <h3 className="text-xl font-bold mb-4">Add Transaction</h3>
-        <form onSubmit={(e) => { e.preventDefault(); addTransaction(newTransaction); }} className="space-y-3">
-          <select
-            value={newTransaction.type}
-            onChange={(e) => setNewTransaction({ ...newTransaction, type: e.target.value })}
-            className="w-full p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="expense">Expense</option>
-            <option value="income">Income</option>
-          </select>
-          <input
-            type="number"
-            value={newTransaction.amount}
-            onChange={(e) => setNewTransaction({ ...newTransaction, amount: e.target.value })}
-            placeholder="Amount"
-            className="w-full p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="col-span-1 md:col-span-4 flex justify-between items-center mb-4">
           <DatePicker
-            selected={newTransaction.date}
-            onChange={(date) => setNewTransaction({ ...newTransaction, date })}
-            className="w-full p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            selectsRange={true}
+            startDate={dateRange[0]}
+            endDate={dateRange[1]}
+            onChange={(update) => {
+              setDateRange(update);
+              const newSummary = getSummaryForTransactions(expenses, incomes);
+              setSummary(newSummary);
+            }}
+            className="p-2 rounded bg-white text-gray-800 border border-gray-300"
           />
-          {newTransaction.type === 'expense' && (
-            <div className="flex items-center">
-              <select
-                value={newTransaction.category}
-                onChange={(e) => setNewTransaction({ ...newTransaction, category: e.target.value })}
-                className="flex-grow p-2 rounded-l border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Category</option>
-                {categories.map(category => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(true)}
-                className="bg-customorange-500 text-white p-2 rounded-r hover:bg-customorange-400 transition duration-200"
-              >
-                <FaPlus />
-              </button>
-            </div>
-          )}
-          <input
-            type="text"
-            value={newTransaction.description}
-            onChange={(e) => setNewTransaction({ ...newTransaction, description: e.target.value })}
-            placeholder="Description"
-            className="w-full p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              checked={newTransaction.isRecurring}
-              onChange={(e) => setNewTransaction({ ...newTransaction, isRecurring: e.target.checked })}
-              className="mr-2"
-            />
-            <label className="text-gray-800 dark:text-gray-400">Recurring Transaction</label>
-          </div>
-          {newTransaction.isRecurring && (
-            <select
-              value={newTransaction.recurringFrequency}
-              onChange={(e) => setNewTransaction({ ...newTransaction, recurringFrequency: e.target.value })}
-              className="w-full p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-              <option value="yearly">Yearly</option>
-            </select>
-          )}
-          <button type="submit" className="w-full bg-customorange-500 text-white p-2 rounded hover:bg-customorange-400 transition duration-200">Add Transaction</button>
-        </form>
-      </div>
-      <div className="col-span-1 md:col-span-2 bg-white p-4 rounded-lg shadow text-gray-800 dark:text-gray-400 dark:bg-dark-background">
-        <h3 className="text-xl font-bold mb-4">Recent Transactions</h3>
-        <ul className="space-y-2">
-          {Array.isArray(expenses) && Array.isArray(incomes) ? (
-            [...expenses, ...incomes]
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow dark:bg-dark-background text-gray-800 dark:text-gray-400">
+          <h3 className="text-lg font-bold">Income</h3>
+          <p className="text-2xl font-bold text-green-500">{summary.totalIncome.toFixed(2)} {currency}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow dark:bg-dark-background text-gray-800 dark:text-gray-400">
+          <h3 className="text-lg font-bold">Expenses</h3>
+          <p className="text-2xl font-bold text-red-500">{summary.totalExpenses.toFixed(2)} {currency}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow dark:bg-dark-background text-gray-800 dark:text-gray-400">
+          <h3 className="text-lg font-bold">Balance</h3>
+          <p className="text-2xl font-bold text-blue-500">{summary.balance.toFixed(2)} {currency}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow dark:bg-dark-background text-gray-800 dark:text-gray-400">
+          <h3 className="text-lg font-bold">Transactions</h3>
+          <p className="text-2xl font-bold text-purple-500">{summary.transactions}</p>
+        </div>
+        <div className="col-span-1 md:col-span-4 bg-white p-4 rounded-lg shadow text-gray-800 dark:text-gray-400 dark:bg-dark-background">
+          <h3 className="text-xl font-bold mb-4">Financial Statistics</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={financialStats}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="Income" fill="#34D399" />
+              <Bar dataKey="Expenses" fill="#F87171" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="col-span-1 md:col-span-2 bg-white p-4 rounded-lg shadow text-gray-800 dark:text-gray-400 dark:bg-dark-background">
+          <h3 className="text-xl font-bold mb-4">Add Transaction</h3>
+          <form onSubmit={(e) => { e.preventDefault(); addTransaction(newTransaction); }} className="space-y-3">
+                <select
+                  value={newTransaction.type}
+                  onChange={(e) => setNewTransaction({ ...newTransaction, type: e.target.value })}
+                  className="w-full p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="expense">Expense</option>
+                  <option value="income">Income</option>
+                </select>
+                <input
+                  type="number"
+                  value={newTransaction.amount}
+                  onChange={(e) => setNewTransaction({ ...newTransaction, amount: e.target.value })}
+                  placeholder="Amount"
+                  className="w-full p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <DatePicker
+                  selected={newTransaction.date}
+                  onChange={(date) => setNewTransaction({ ...newTransaction, date })}
+                  className="w-full p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {newTransaction.type === 'expense' && (
+                  <div className="flex items-center">
+                    <select
+                      value={newTransaction.category}
+                      onChange={(e) => setNewTransaction({ ...newTransaction, category: e.target.value })}
+                      className="flex-grow p-2 rounded-l border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select Category</option>
+                      {categories.map(category => (
+                        <option key={category} value={category}>{category}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setIsModalOpen(true)}
+                      className="bg-customorange-500 text-white p-2 rounded-r hover:bg-customorange-400 transition duration-200"
+                    >
+                      <FaPlus />
+                    </button>
+                  </div>
+                )}
+                <input
+                  type="text"
+                  value={newTransaction.description}
+                  onChange={(e) => setNewTransaction({ ...newTransaction, description: e.target.value })}
+                  placeholder="Description"
+                  className="w-full p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={newTransaction.isRecurring}
+                    onChange={(e) => setNewTransaction({ ...newTransaction, isRecurring: e.target.checked })}
+                    className="mr-2"
+                  />
+                  <label className="text-gray-800 dark:text-gray-400">Recurring Transaction</label>
+                </div>
+                {newTransaction.isRecurring && (
+                  <select
+                    value={newTransaction.recurringFrequency}
+                    onChange={(e) => setNewTransaction({ ...newTransaction, recurringFrequency: e.target.value })}
+                    className="w-full p-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                  </select>
+                )}
+                <button type="submit" className="w-full bg-customorange-500 text-white p-2 rounded hover:bg-customorange-400 transition duration-200">Add Transaction</button>
+              </form>
+        </div>
+        <div className="col-span-1 md:col-span-2 bg-white p-4 rounded-lg shadow text-gray-800 dark:text-gray-400 dark:bg-dark-background">
+          <h3 className="text-xl font-bold mb-4">Recent Transactions</h3>
+          <ul className="space-y-2">
+            {[...expenses, ...incomes]
               .sort((a, b) => new Date(b.date) - new Date(a.date))
               .slice(0, 10)
               .map(transaction => (
                 <li key={transaction.id} className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <div>
-                    <span className="font-medium">{transaction.description || transaction.category}</span>
-                    <span className="text-sm text-gray-500 block">{new Date(transaction.date).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className={`${transaction.type === 'income' ? 'text-green-500' : 'text-red-500'} font-medium mr-2`}>
-                      {transaction.type === 'income' ? '+' : '-'}{transaction.amount} {currency}
-                    </span>
-                    <button 
-                      onClick={() => {
-                        console.log('Delete button clicked for transaction:', transaction);
-                        deleteTransaction(transaction.id, transaction.type);
-                      }} 
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <FaTrash />
-                    </button>
-                  </div>
-                </li>
-              ))
-          ) : (
-            <li>Error: Transactions data is not in the expected format</li>
-          )}
-        </ul>
+                      <div>
+                        <span className="font-medium">{transaction.description || transaction.category}</span>
+                        <span className="text-sm text-gray-500 block">{new Date(transaction.date).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className={`${transaction.type === 'income' ? 'text-green-500' : 'text-red-500'} font-medium mr-2`}>
+                          {transaction.type === 'income' ? '+' : '-'}{transaction.amount} {currency}
+                        </span>
+                        <button onClick={() => deleteTransaction(transaction.id, transaction.type)} className="text-red-500 hover:text-red-700">
+                          <FaTrash />
+                        </button>
+                      </div>
+                    </li>
+              ))}
+          </ul>
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
  const renderTotalExpenses = () => {
     const expensesByCategory = getExpensesByCategory();
