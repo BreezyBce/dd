@@ -7,7 +7,9 @@ import * as XLSX from 'xlsx';
 import "react-datepicker/dist/react-datepicker.css";
 import { db, auth } from '../firebase';
 import { collection, addDoc, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
-
+import withSubscription from '../withSubscription';
+import { useSubscription } from '../SubscriptionContext';
+import UpgradeButton from './UpgradeButton';
 
 Modal.setAppElement('#root');
 
@@ -31,6 +33,8 @@ const ExpenseTracker = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpenses: 0, balance: 0, transactions: 0 });
 
+  const { subscriptionStatus } = useSubscription();
+
   useEffect(() => {
     // Clear all transactions
     setExpenses([]);
@@ -52,45 +56,45 @@ const ExpenseTracker = () => {
     localStorage.setItem('currency', currency);
   }, [expenses, incomes, categories, currency]);
 
-    const addTransaction = async (transaction) => {
-      const newTransactionWithId = { ...transaction, id: Date.now(), amount: parseFloat(transaction.amount) };
-      
-     
-      try {
-        const docRef = await addDoc(collection(db, 'transactions'), {
-          ...newTransactionWithId,
-          userId: auth.currentUser.uid,
-        });
+  const addTransaction = async (transaction) => {
+    if (subscriptionStatus !== 'premium' && expenses.length + incomes.length >= 10) {
+      alert('You have reached the limit for free users. Please upgrade to add more transactions.');
+      return;
+    }
 
-        if (transaction.type === 'expense') {
-          setExpenses([...expenses, { ...newTransactionWithId, id: docRef.id }]);
-        } else {
-          setIncomes([...incomes, { ...newTransactionWithId, id: docRef.id }]);
-        }
-        
+    const newTransactionWithId = { ...transaction, id: Date.now(), amount: parseFloat(transaction.amount) };
+    
+    try {
+      const docRef = await addDoc(collection(db, 'transactions'), {
+        ...newTransactionWithId,
+        userId: auth.currentUser.uid,
+      });
+
+      if (transaction.type === 'expense') {
+        setExpenses([...expenses, { ...newTransactionWithId, id: docRef.id }]);
+      } else {
+        setIncomes([...incomes, { ...newTransactionWithId, id: docRef.id }]);
+      }
 
       // Update the summary immediately
-          const summary = getSummaryForTransactions([...expenses, newTransactionWithId], [...incomes, newTransactionWithId]);
-          setSummary(summary);
-        } catch (error) {
-          console.error("Error adding transaction: ", error);
-        }
+      const summary = getSummaryForTransactions([...expenses, newTransactionWithId], [...incomes, newTransactionWithId]);
+      setSummary(summary);
+    } catch (error) {
+      console.error("Error adding transaction: ", error);
+    }
 
-        // Reset the form
-        setNewTransaction({
-          type: 'expense',
-          amount: '',
-          category: '',
-          description: '',
-          date: new Date(),
-          isRecurring: false,
-          recurringFrequency: 'monthly',
-        });
-      };
+    // Reset the form
+    setNewTransaction({
+      type: 'expense',
+      amount: '',
+      category: '',
+      description: '',
+      date: new Date(),
+      isRecurring: false,
+      recurringFrequency: 'monthly',
+    });
+  };
 
- 
-
-  // Add this new function to calculate the summary
   const getSummaryForTransactions = (currentExpenses, currentIncomes) => {
     const filteredExpenses = currentExpenses.filter(expense => 
       new Date(expense.date) >= dateRange[0] && new Date(expense.date) <= dateRange[1]
@@ -105,8 +109,6 @@ const ExpenseTracker = () => {
 
     return { totalIncome, totalExpenses, balance, transactions };
   };
-
-  
 
   const deleteTransaction = async (id, type) => {
     try {
@@ -197,6 +199,11 @@ const ExpenseTracker = () => {
   };
 
   const exportToExcel = () => {
+    if (subscriptionStatus !== 'premium') {
+      alert('Exporting to Excel is a premium feature. Please upgrade to use this feature.');
+      return;
+    }
+
     const workbook = XLSX.utils.book_new();
     const expenseData = expenses.map(({ id, ...rest }) => rest);
     const incomeData = incomes.map(({ id, ...rest }) => rest);
@@ -212,59 +219,58 @@ const ExpenseTracker = () => {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#A4DE6C', '#D0ED57', '#FAD000', '#F0E68C'];
 
-              const renderDashboard = () => {
-                const summary = getSummary();
-                const financialStats = getFinancialStatistics();
+  const renderDashboard = () => {
+    const summary = getSummary();
+    const financialStats = getFinancialStatistics();
 
-                return (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="col-span-1 md:col-span-4 flex justify-between items-center mb-4">
-              <DatePicker
-                selectsRange={true}
-                startDate={dateRange[0]}
-                endDate={dateRange[1]}
-                onChange={(update) => {
-                  setDateRange(update);
-                  const newSummary = getSummaryForTransactions(expenses, incomes);
-                  setSummary(newSummary);
-                }}
-                className="p-2 rounded bg-white text-gray-800 border border-gray-300"
-              />
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow dark:bg-dark-background text-gray-800 dark:text-gray-400">
-              <h3 className="text-lg font-bold">Income</h3>
-              <p className="text-2xl font-bold text-green-500">{summary.totalIncome.toFixed(2)} {currency}</p>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow dark:bg-dark-background text-gray-800 dark:text-gray-400">
-              <h3 className="text-lg font-bold">Expenses</h3>
-              <p className="text-2xl font-bold text-red-500">{summary.totalExpenses.toFixed(2)} {currency}</p>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow dark:bg-dark-background text-gray-800 dark:text-gray-400">
-              <h3 className="text-lg font-bold">Balance</h3>
-              <p className="text-2xl font-bold text-blue-500">{summary.balance.toFixed(2)} {currency}</p>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow dark:bg-dark-background text-gray-800 dark:text-gray-400">
-              <h3 className="text-lg font-bold">Transactions</h3>
-              <p className="text-2xl font-bold text-purple-500">{summary.transactions}</p>
-            </div>
-            <div className="col-span-1 md:col-span-4 bg-white p-4 rounded-lg shadow text-gray-800 dark:text-gray-400 dark:bg-dark-background">
-              <h3 className="text-xl font-bold mb-4">Financial Statistics</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={financialStats}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="Income" fill="#34D399" />
-                  <Bar dataKey="Expenses" fill="#F87171" />
-                </BarChart>
-              </ResponsiveContainer>
-            
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="col-span-1 md:col-span-4 flex justify-between items-center mb-4">
+          <DatePicker
+            selectsRange={true}
+            startDate={dateRange[0]}
+            endDate={dateRange[1]}
+            onChange={(update) => {
+              setDateRange(update);
+              const newSummary = getSummaryForTransactions(expenses, incomes);
+              setSummary(newSummary);
+            }}
+            className="p-2 rounded bg-white text-gray-800 border border-gray-300"
+          />
         </div>
-            <div className="col-span-1 md:col-span-2 bg-white p-4 rounded-lg shadow text-gray-800 dark:text-gray-400 dark:bg-dark-background">
-              <h3 className="text-xl font-bold mb-4">Add Transaction</h3>
-              <form onSubmit={(e) => { e.preventDefault(); addTransaction(newTransaction); }} className="space-y-3">
+        <div className="bg-white p-4 rounded-lg shadow dark:bg-dark-background text-gray-800 dark:text-gray-400">
+          <h3 className="text-lg font-bold">Income</h3>
+          <p className="text-2xl font-bold text-green-500">{summary.totalIncome.toFixed(2)} {currency}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow dark:bg-dark-background text-gray-800 dark:text-gray-400">
+          <h3 className="text-lg font-bold">Expenses</h3>
+          <p className="text-2xl font-bold text-red-500">{summary.totalExpenses.toFixed(2)} {currency}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow dark:bg-dark-background text-gray-800 dark:text-gray-400">
+          <h3 className="text-lg font-bold">Balance</h3>
+          <p className="text-2xl font-bold text-blue-500">{summary.balance.toFixed(2)} {currency}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow dark:bg-dark-background text-gray-800 dark:text-gray-400">
+          <h3 className="text-lg font-bold">Transactions</h3>
+          <p className="text-2xl font-bold text-purple-500">{summary.transactions}</p>
+        </div>
+        <div className="col-span-1 md:col-span-4 bg-white p-4 rounded-lg shadow text-gray-800 dark:text-gray-400 dark:bg-dark-background">
+          <h3 className="text-xl font-bold mb-4">Financial Statistics</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={financialStats}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="Income" fill="#34D399" />
+              <Bar dataKey="Expenses" fill="#F87171" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="col-span-1 md:col-span-2 bg-white p-4 rounded-lg shadow text-gray-800 dark:text-gray-400 dark:bg-dark-background">
+          <h3 className="text-xl font-bold mb-4">Add Transaction</h3>
+          <form onSubmit={(e) => { e.preventDefault(); addTransaction(newTransaction); }} className="space-y-3">
                 <select
                   value={newTransaction.type}
                   onChange={(e) => setNewTransaction({ ...newTransaction, type: e.target.value })}
@@ -336,17 +342,15 @@ const ExpenseTracker = () => {
                 )}
                 <button type="submit" className="w-full bg-customorange-500 text-white p-2 rounded hover:bg-customorange-400 transition duration-200">Add Transaction</button>
               </form>
-            </div>
-
-            
-            <div className="col-span-1 md:col-span-2 bg-white p-4 rounded-lg shadow text-gray-800 dark:text-gray-400 dark:bg-dark-background">
-              <h3 className="text-xl font-bold mb-4">Recent Transactions</h3>
-              <ul className="space-y-2">
-                {[...expenses, ...incomes]
-                  .sort((a, b) => new Date(b.date) - new Date(a.date))
-                  .slice(0, 10)
-                  .map(transaction => (
-                    <li key={transaction.id} className="flex justify-between items-center py-2 border-b border-gray-200">
+        </div>
+        <div className="col-span-1 md:col-span-2 bg-white p-4 rounded-lg shadow text-gray-800 dark:text-gray-400 dark:bg-dark-background">
+          <h3 className="text-xl font-bold mb-4">Recent Transactions</h3>
+          <ul className="space-y-2">
+            {[...expenses, ...incomes]
+              .sort((a, b) => new Date(b.date) - new Date(a.date))
+              .slice(0, 10)
+              .map(transaction => (
+                <li key={transaction.id} className="flex justify-between items-center py-2 border-b border-gray-200">
                       <div>
                         <span className="font-medium">{transaction.description || transaction.category}</span>
                         <span className="text-sm text-gray-500 block">{new Date(transaction.date).toLocaleDateString()}</span>
@@ -360,14 +364,14 @@ const ExpenseTracker = () => {
                         </button>
                       </div>
                     </li>
-                  ))}
-              </ul>
-            </div>
+              ))}
+          </ul>
+        </div>
       </div>
     );
   };
 
-  const renderTotalExpenses = () => {
+ const renderTotalExpenses = () => {
     const expensesByCategory = getExpensesByCategory();
     const total = expensesByCategory.reduce((sum, category) => sum + category.value, 0);
 
@@ -482,9 +486,16 @@ const ExpenseTracker = () => {
           <option value="GBP">GBP</option>
         </select>
       </div>
-      <button onClick={exportToExcel} className="w-full bg-green-500 text-white p-2 rounded mb-4 flex items-center justify-center hover:bg-green-600 transition duration-200">
+      <button 
+        onClick={exportToExcel} 
+        className="w-full bg-green-500 text-white p-2 rounded mb-4 flex items-center justify-center hover:bg-green-600 transition duration-200"
+        disabled={subscriptionStatus !== 'premium'}
+      >
         <FaFileExport className="mr-2" /> Export to Excel
       </button>
+      {subscriptionStatus !== 'premium' && (
+        <p className="text-sm text-gray-600 mb-4">Exporting to Excel is a premium feature.</p>
+      )}
       <div className="mt-4">
         <h4 className="text-gray-800 mb-2">Manage Categories</h4>
         <ul className="space-y-2">
@@ -549,8 +560,16 @@ const ExpenseTracker = () => {
           </div>
         </form>
       </Modal>
+
+      {subscriptionStatus !== 'premium' && (
+        <div className="mt-4 p-4 bg-yellow-100 rounded-lg">
+          <h3 className="text-lg font-bold">Upgrade to Premium</h3>
+          <p className="text-yellow-800 mb-10">You cancelled your premium subscription, you will have limited access. Upgrade to premium for unlimited transactions and advanced features.</p>
+          <UpgradeButton />
+        </div>
+      )}
     </div>
   );
-  };
+};
 
-  export default ExpenseTracker;
+export default withSubscription(ExpenseTracker, 'premium');
