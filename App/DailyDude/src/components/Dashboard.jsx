@@ -450,7 +450,7 @@ useEffect(() => {
             )}
           </div>
         );
-              case 'ExpensesSummary':
+        case 'ExpensesSummary':
         return (
           <div className="bg-white p-6 rounded-lg dark:bg-dark-background-2">
             <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-400">Today's Expenses</h2>
@@ -625,6 +625,6 @@ useEffect(() => {
 )}
 </DragDropContext>
 );
-;
+};
 
 export default Dashboard;
