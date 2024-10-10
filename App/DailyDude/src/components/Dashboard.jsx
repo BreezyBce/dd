@@ -35,6 +35,7 @@ const Dashboard = ({ expenses = [] }) => {
   const [showAddWidget, setShowAddWidget] = useState(false);
   const widgetRefs = useRef({});
   const [isLoading, setIsLoading] = useState(true);
+  const [expenses, setExpenses] = useState([]);
   const [todayExpenses, setTodayExpenses] = useState([]);
   const [totalExpensesToday, setTotalExpensesToday] = useState(0);
   const [isPremium, setIsPremium] = useState(false);
@@ -232,17 +233,21 @@ useEffect(() => {
   });
 
 
+  // useEffect(() => {
+  //  calculateTodayExpenses();
+ // }, [expenses]);
+
+ // const calculateTodayExpenses = () => {
+   // const today = new Date();
+   // today.setHours(0, 0, 0, 0);
+
+
    const filteredExpenses = expenses.filter(expense => {
       const expenseDate = new Date(expense.date);
       return expenseDate >= today && expenseDate < new Date(today.getTime() + 86400000);
     });
 
-    setTodayExpenses(filteredExpenses);
-    const total = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-    setTotalExpensesToday(total);
-  };
-
- const fetchTodayExpenses = async () => {
+   const fetchTodayExpenses = async () => {
     if (auth.currentUser) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -450,7 +455,7 @@ useEffect(() => {
             )}
           </div>
         );
-        case 'ExpensesSummary':
+              case 'ExpensesSummary':
         return (
           <div className="bg-white p-6 rounded-lg dark:bg-dark-background-2">
             <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-400">Today's Expenses</h2>
@@ -602,29 +607,29 @@ useEffect(() => {
                     </div>
                   </div>
                 </div>
-               </div>
+              </div>
             )}
           </Droppable>
 {showAddWidget && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white p-6 rounded-lg dark:bg-dark-background-2 text-gray-800 dark:text-gray-400" style={{ width: '50%' }}>
-                <h2 className="text-2xl font-bold mb-4">Add Widget</h2>
-                {ALL_WIDGET_TYPES.map(type => (
-                  <button 
-                    key={type} 
-                    onClick={() => addWidget(type)} 
-                    className={`block w-full text-left p-2 hover:bg-gray-100 ${widgets.some(w => w.type === type) ? 'line-through text-gray-500' : ''}`}
-                    disabled={widgets.some(w => w.type === type)}
-                  >
-                    {type}
-                  </button>
-                ))}
-                <button onClick={() => setShowAddWidget(false)} className="mt-4 bg-red-500 text-white px-4 py-2 rounded">Cancel</button>
-              </div>
-            </div>
-          )}
-        </DragDropContext>
-      );
-    };
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded-lg dark:bg-dark-background-2 text-gray-800 dark:text-gray-400" style={{ width: '50%' }}>
+      <h2 className="text-2xl font-bold mb-4">Add Widget</h2>
+      {ALL_WIDGET_TYPES.map(type => (
+        <button 
+          key={type} 
+          onClick={() => addWidget(type)} 
+          className={`block w-full text-left p-2 hover:bg-gray-100 ${widgets.some(w => w.type === type) ? 'line-through text-gray-500' : ''}`}
+          disabled={widgets.some(w => w.type === type)}
+        >
+          {type}
+        </button>
+      ))}
+      <button onClick={() => setShowAddWidget(false)} className="mt-4 bg-red-500 text-white px-4 py-2 rounded">Cancel</button>
+    </div>
+  </div>
+)}
+</DragDropContext>
+);
+};
 
 export default Dashboard;
