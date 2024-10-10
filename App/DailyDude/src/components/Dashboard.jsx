@@ -36,7 +36,6 @@ const Dashboard = ({ expenses = [] }) => {
   const widgetRefs = useRef({});
   const [isLoading, setIsLoading] = useState(true);
   const [todayExpenses, setTodayExpenses] = useState([]);
-  const [totalExpensesToday, setTotalExpensesToday] = useState(0);
   const [isPremium, setIsPremium] = useState(false);
   const location = useLocation();
   const [widgets, setWidgets] = useState([]);
