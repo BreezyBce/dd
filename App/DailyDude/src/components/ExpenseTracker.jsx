@@ -110,25 +110,36 @@ const ExpenseTracker = () => {
     return { totalIncome, totalExpenses, balance, transactions };
   };
 
-  const deleteTransaction = async (id, type) => {
+ const deleteTransaction = async (id, type) => {
+  console.log(`Attempting to delete transaction: ${id}, type: ${type}`);
+  console.log('Current expenses:', expenses);
+  console.log('Current incomes:', incomes);
+
   try {
     await deleteDoc(doc(db, 'transactions', id));
+    console.log(`Document deleted from Firestore: ${id}`);
 
     if (type === 'expense') {
       setExpenses(prevExpenses => {
+        console.log('Previous expenses:', prevExpenses);
         if (!Array.isArray(prevExpenses)) {
           console.error('prevExpenses is not an array:', prevExpenses);
           return [];
         }
-        return prevExpenses.filter(expense => expense.id !== id);
+        const newExpenses = prevExpenses.filter(expense => expense.id !== id);
+        console.log('New expenses after deletion:', newExpenses);
+        return newExpenses;
       });
     } else {
       setIncomes(prevIncomes => {
+        console.log('Previous incomes:', prevIncomes);
         if (!Array.isArray(prevIncomes)) {
           console.error('prevIncomes is not an array:', prevIncomes);
           return [];
         }
-        return prevIncomes.filter(income => income.id !== id);
+        const newIncomes = prevIncomes.filter(income => income.id !== id);
+        console.log('New incomes after deletion:', newIncomes);
+        return newIncomes;
       });
     }
 
@@ -234,8 +245,12 @@ const ExpenseTracker = () => {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#A4DE6C', '#D0ED57', '#FAD000', '#F0E68C'];
 
   const renderDashboard = () => {
-    const summary = getSummary();
-    const financialStats = getFinancialStatistics();
+  const summary = getSummary();
+  const financialStats = getFinancialStatistics();
+
+  console.log('Rendering dashboard');
+  console.log('Current expenses:', expenses);
+  console.log('Current incomes:', incomes);
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
