@@ -374,8 +374,9 @@ const ExpenseTracker = () => {
         </div>
         <div className="col-span-1 md:col-span-2 bg-white p-4 rounded-lg shadow text-gray-800 dark:text-gray-400 dark:bg-dark-background">
           <h3 className="text-xl font-bold mb-4">Recent Transactions</h3>
-          <ul className="space-y-2">
-            {[...expenses, ...incomes]
+        <ul className="space-y-2">
+          {Array.isArray(expenses) && Array.isArray(incomes) ? (
+            [...expenses, ...incomes]
               .sort((a, b) => new Date(b.date) - new Date(a.date))
               .slice(0, 10)
               .map(transaction => (
