@@ -602,29 +602,29 @@ useEffect(() => {
                     </div>
                   </div>
                 </div>
-              </div>
+               </div>
             )}
           </Droppable>
 {showAddWidget && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="bg-white p-6 rounded-lg dark:bg-dark-background-2 text-gray-800 dark:text-gray-400" style={{ width: '50%' }}>
-      <h2 className="text-2xl font-bold mb-4">Add Widget</h2>
-      {ALL_WIDGET_TYPES.map(type => (
-        <button 
-          key={type} 
-          onClick={() => addWidget(type)} 
-          className={`block w-full text-left p-2 hover:bg-gray-100 ${widgets.some(w => w.type === type) ? 'line-through text-gray-500' : ''}`}
-          disabled={widgets.some(w => w.type === type)}
-        >
-          {type}
-        </button>
-      ))}
-      <button onClick={() => setShowAddWidget(false)} className="mt-4 bg-red-500 text-white px-4 py-2 rounded">Cancel</button>
-    </div>
-  </div>
-)}
-</DragDropContext>
-);
-};
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-lg dark:bg-dark-background-2 text-gray-800 dark:text-gray-400" style={{ width: '50%' }}>
+                <h2 className="text-2xl font-bold mb-4">Add Widget</h2>
+                {ALL_WIDGET_TYPES.map(type => (
+                  <button 
+                    key={type} 
+                    onClick={() => addWidget(type)} 
+                    className={`block w-full text-left p-2 hover:bg-gray-100 ${widgets.some(w => w.type === type) ? 'line-through text-gray-500' : ''}`}
+                    disabled={widgets.some(w => w.type === type)}
+                  >
+                    {type}
+                  </button>
+                ))}
+                <button onClick={() => setShowAddWidget(false)} className="mt-4 bg-red-500 text-white px-4 py-2 rounded">Cancel</button>
+              </div>
+            </div>
+          )}
+        </DragDropContext>
+      );
+    };
 
 export default Dashboard;
