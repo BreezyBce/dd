@@ -255,37 +255,37 @@ useEffect(() => {
     fetchTodayExpenses();
   }, []);
 
-  const fetchTodayExpenses = async () => {
-    if (auth.currentUser) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+ const fetchTodayExpenses = async () => {
+  if (auth.currentUser) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-      const q = query(
-        collection(db, 'transactions'),
-        where("userId", "==", auth.currentUser.uid),
-        where("type", "==", "expense"),
-        where("date", ">=", today),
-        where("date", "<", tomorrow)
-      );
+    const q = query(
+      collection(db, 'transactions'),
+      where("userId", "==", auth.currentUser.uid),
+      where("type", "==", "expense")
+    );
 
-      try {
-        const querySnapshot = await getDocs(q);
-        const fetchedExpenses = querySnapshot.docs.map(doc => ({
+    try {
+      const querySnapshot = await getDocs(q);
+      const fetchedExpenses = querySnapshot.docs
+        .map(doc => ({
           id: doc.id,
           ...doc.data(),
           date: doc.data().date.toDate(),
-        }));
+        }))
+        .filter(expense => expense.date >= today && expense.date < tomorrow);
 
-        setTodayExpenses(fetchedExpenses);
-        const total = fetchedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-        setTotalExpensesToday(total);
-      } catch (error) {
-        console.error("Error fetching today's expenses:", error);
-      }
+      setTodayExpenses(fetchedExpenses);
+      const total = fetchedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+      setTotalExpensesToday(total);
+    } catch (error) {
+      console.error("Error fetching today's expenses:", error);
     }
-  };
+  }
+};
 
   useEffect(() => {
     // Adjust heights after render
