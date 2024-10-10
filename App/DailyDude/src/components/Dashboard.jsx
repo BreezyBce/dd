@@ -36,6 +36,7 @@ const Dashboard = ({ expenses = [] }) => {
   const widgetRefs = useRef({});
   const [isLoading, setIsLoading] = useState(true);
   const [todayExpenses, setTodayExpenses] = useState([]);
+  const [totalExpensesToday, setTotalExpensesToday] = useState(0);
   const [isPremium, setIsPremium] = useState(false);
   const location = useLocation();
   const [widgets, setWidgets] = useState([]);
@@ -232,7 +233,7 @@ useEffect(() => {
 
   const [totalExpensesToday, setTotalExpensesToday] = useState(0);
 
-  useEffect(() => {
+   useEffect(() => {
     calculateTodayExpenses();
   }, [expenses]);
 
@@ -240,7 +241,8 @@ useEffect(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const filteredExpenses = expenses.filter(expense => {
+
+   const filteredExpenses = expenses.filter(expense => {
       const expenseDate = new Date(expense.date);
       return expenseDate >= today && expenseDate < new Date(today.getTime() + 86400000);
     });
@@ -420,26 +422,26 @@ useEffect(() => {
         );
               case 'ExpensesSummary':
               return (
-                <div className="bg-white p-6 rounded-lg dark:bg-dark-background-2">
-                  <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-400">Today's Expenses</h2>
-                  <p className="text-xl text-gray-800 dark:text-gray-400 mb-4">Total: ${totalExpensesToday.toFixed(2)}</p>
-                  {todayExpenses.length > 0 ? (
-                    <ul className="space-y-2">
-                      {todayExpenses.map((expense, index) => (
-                        <li key={index} className="flex justify-between items-center text-gray-800 dark:text-gray-400 border-b pb-2">
-                          <div>
-                            <span className="font-medium">{expense.description}</span>
-                            <span className="text-sm text-gray-500 ml-2">({expense.category})</span>
-                          </div>
-                          <span className="font-medium">${expense.amount.toFixed(2)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-gray-600 dark:text-gray-400">No expenses recorded for today.</p>
-                  )}
-                </div>
-              );
+          <div className="bg-white p-6 rounded-lg dark:bg-dark-background-2">
+            <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-400">Today's Expenses</h2>
+            <p className="text-xl text-gray-800 dark:text-gray-400 mb-4">Total: ${totalExpensesToday.toFixed(2)}</p>
+            {todayExpenses.length > 0 ? (
+              <ul className="space-y-2">
+                {todayExpenses.map((expense, index) => (
+                  <li key={index} className="flex justify-between items-center text-gray-800 dark:text-gray-400 border-b pb-2">
+                    <div>
+                      <span className="font-medium">{expense.description}</span>
+                      <span className="text-sm text-gray-500 ml-2">({expense.category})</span>
+                    </div>
+                    <span className="font-medium">${expense.amount.toFixed(2)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-600 dark:text-gray-400">No expenses recorded for today.</p>
+            )}
+          </div>
+        );
       case 'Calculator':
         return (
           <div className="col-span-3 md:col-span-1 bg-white p-6 rounded-lg dark:bg-dark-background-2">
