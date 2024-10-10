@@ -1,49 +1,43 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { collection, doc, getDoc, setDoc, query, where, getDocs, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { db, auth } from '../firebase';
+import { useLocation } from 'react-router-dom';
+import { FaTrash, FaPlus, FaExpand } from 'react-icons/fa';
+
+// Import your components here
 import Translator from './Translator';
 import Calculator from './Calculator';
 import CurrencyConverter from './CurrencyConverter';
-import Clock from './Clock';  
-import UnitConverter from './UnitConverter';  
-import WeatherForecast from './WeatherForecast';  
-import { FaTrash, FaPlus, FaExpand, FaCompress } from 'react-icons/fa';
-import { collection, doc, getDoc, setDoc, query, where, getDocs,  addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db, auth } from '../firebase';
-import { useLocation } from 'react-router-dom';
+import Clock from './Clock';
+import UnitConverter from './UnitConverter';
+import WeatherForecast from './WeatherForecast';
 
-
-
-// Define all available widget types
 const ALL_WIDGET_TYPES = [
-  'TodoList',
-  'EventsList',
-  'ExpensesSummary',
-  'Calculator',
-  'CurrencyConverter',
-  'Translator',
-  'Clock',
-  'UnitConverter',
-  'WeatherForecast'
+  'TodoList', 'EventsList', 'ExpensesSummary', 'Calculator',
+  'CurrencyConverter', 'Translator', 'Clock', 'UnitConverter', 'WeatherForecast'
 ];
 
-const Dashboard = ({ expenses = [] }) => {
+const Dashboard = () => {
+  // State declarations
+  const [widgets, setWidgets] = useState([]);
+  const [deletedWidgets, setDeletedWidgets] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPremium, setIsPremium] = useState(false);
+  const [showAddWidget, setShowAddWidget] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [notes, setNotes] = useState([]);
   const [events, setEvents] = useState([]);
-  const currentDate = new Date();
-  const [deletedWidgets, setDeletedWidgets] = useState([]);
-  const [showAddWidget, setShowAddWidget] = useState(false);
-  const widgetRefs = useRef({});
-  const [isLoading, setIsLoading] = useState(true);
   const [expenses, setExpenses] = useState([]);
   const [todayExpenses, setTodayExpenses] = useState([]);
   const [totalExpensesToday, setTotalExpensesToday] = useState(0);
-  const [isPremium, setIsPremium] = useState(false);
+
   const location = useLocation();
-  const [widgets, setWidgets] = useState([]);
+  const widgetRefs = useRef({});
+  const currentDate = new Date();
 
-
- useEffect(() => {
+  // Subscription status check
+  useEffect(() => {
     const handlePostCheckoutRedirect = async () => {
       const urlParams = new URLSearchParams(location.search);
       const sessionId = urlParams.get('session_id');
@@ -52,27 +46,21 @@ const Dashboard = ({ expenses = [] }) => {
         try {
           const response = await fetch('/api/subscription-status', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'upgrade', session_id: sessionId }),
           });
 
-          if (!response.ok) {
-            throw new Error('Failed to update subscription status');
-          }
+          if (!response.ok) throw new Error('Failed to update subscription status');
 
           const data = await response.json();
           console.log('Subscription status update result:', data);
           setIsPremium(data.status === 'premium');
 
-          // Remove the session_id from the URL
           window.history.replaceState({}, document.title, window.location.pathname);
         } catch (error) {
           console.error('Error updating subscription status:', error);
         }
       }
-
       setIsLoading(false);
     };
 
@@ -81,9 +69,7 @@ const Dashboard = ({ expenses = [] }) => {
       if (user) {
         try {
           const response = await fetch(`/api/subscription-status?userId=${user.uid}`);
-          if (!response.ok) {
-            throw new Error('Failed to fetch subscription status');
-          }
+          if (!response.ok) throw new Error('Failed to fetch subscription status');
           const data = await response.json();
           setIsPremium(data.status === 'premium');
         } catch (error) {
@@ -97,101 +83,100 @@ const Dashboard = ({ expenses = [] }) => {
     checkSubscriptionStatus();
   }, [location]);
 
+  // Dashboard layout functions
+  const fetchDashboardLayout = async (userId) => {
+    setIsLoading(true);
+    try {
+      const docRef = doc(db, 'dashboardLayouts', userId);
+      const docSnap = await getDoc(docRef);
 
-    const fetchDashboardLayout = async (userId) => {
-  setIsLoading(true);
-  try {
-    const docRef = doc(db, 'dashboardLayouts', userId);
-    const docSnap = await getDoc(docRef);
-
-    if (docSnap.exists()) {
-      setWidgets(docSnap.data().widgets);
-    } else {
-      const defaultWidgets = [
-        { id: 'todo', type: 'TodoList', size: 'third' },
-        { id: 'events', type: 'EventsList', size: 'third' },
-        { id: 'expenses', type: 'ExpensesSummary', size: 'third' },
-        { id: 'calculator', type: 'Calculator', size: 'half' },
-        { id: 'currency', type: 'CurrencyConverter', size: 'half' },
-        { id: 'translator', type: 'Translator', size: 'full' },
-      ];
-      setWidgets(defaultWidgets);
-      await setDoc(docRef, { widgets: defaultWidgets });
-    }
-  } catch (error) {
-    console.error("Error fetching dashboard layout:", error);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-
- useEffect(() => {
-  const unsubscribe = auth.onAuthStateChanged(async (user) => {
-    if (user) {
-      await fetchDashboardLayout(user.uid);
-    } else {
-      setWidgets([]);
+      if (docSnap.exists()) {
+        setWidgets(docSnap.data().widgets);
+      } else {
+        const defaultWidgets = [
+          { id: 'todo', type: 'TodoList', size: 'third' },
+          { id: 'events', type: 'EventsList', size: 'third' },
+          { id: 'expenses', type: 'ExpensesSummary', size: 'third' },
+          { id: 'calculator', type: 'Calculator', size: 'half' },
+          { id: 'currency', type: 'CurrencyConverter', size: 'half' },
+          { id: 'translator', type: 'Translator', size: 'full' },
+        ];
+        setWidgets(defaultWidgets);
+        await setDoc(docRef, { widgets: defaultWidgets });
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard layout:", error);
+    } finally {
       setIsLoading(false);
     }
-  });
+  };
 
-  return () => unsubscribe();
-}, []);
-
-  
-  useEffect(() => {
-    const saveDashboardLayout = async () => {
-      if (auth.currentUser && widgets.length > 0 && !isLoading) {
-        try {
-          const docRef = doc(db, 'dashboardLayouts', auth.currentUser.uid);
-          await setDoc(docRef, { widgets }, { merge: true });
-        } catch (error) {
-          console.error("Error saving dashboard layout:", error);
-        }
+  const saveDashboardLayout = async () => {
+    if (auth.currentUser && widgets.length > 0 && !isLoading) {
+      try {
+        const docRef = doc(db, 'dashboardLayouts', auth.currentUser.uid);
+        await setDoc(docRef, { widgets }, { merge: true });
+      } catch (error) {
+        console.error("Error saving dashboard layout:", error);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        await fetchDashboardLayout(user.uid);
+      } else {
+        setWidgets([]);
+        setIsLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     saveDashboardLayout();
   }, [widgets, isLoading]);
 
+  // Todo functions
   const fetchTodos = async () => {
-  if (auth.currentUser) {
-    try {
-      const q = query(collection(db, 'todos'), where("userId", "==", auth.currentUser.uid));
-      const querySnapshot = await getDocs(q);
-      const fetchedTodos = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setNotes(fetchedTodos);
-    } catch (error) {
-      console.error("Error fetching todos:", error);
+    if (auth.currentUser) {
+      try {
+        const q = query(collection(db, 'todos'), where("userId", "==", auth.currentUser.uid));
+        const querySnapshot = await getDocs(q);
+        const fetchedTodos = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setNotes(fetchedTodos);
+      } catch (error) {
+        console.error("Error fetching todos:", error);
+      }
     }
-  }
-};
+  };
 
-useEffect(() => {
-  fetchTodos();
-}, []);
-  
+  useEffect(() => {
+    fetchTodos();
+  }, []);
+
   const handleAddNote = async () => {
-  if (newNote.trim() !== '' && auth.currentUser) {
-    const newTodo = {
-      content: newNote,
-      completed: false,
-      userId: auth.currentUser.uid
-    };
-    try {
-      const docRef = await addDoc(collection(db, 'todos'), newTodo);
-      const newNoteWithId = { ...newTodo, id: docRef.id };
-      setNotes(prevNotes => [...prevNotes, newNoteWithId]);
-      setNewNote('');
-    } catch (error) {
-      console.error("Error adding new note:", error);
+    if (newNote.trim() !== '' && auth.currentUser) {
+      const newTodo = {
+        content: newNote,
+        completed: false,
+        userId: auth.currentUser.uid
+      };
+      try {
+        const docRef = await addDoc(collection(db, 'todos'), newTodo);
+        const newNoteWithId = { ...newTodo, id: docRef.id };
+        setNotes(prevNotes => [...prevNotes, newNoteWithId]);
+        setNewNote('');
+      } catch (error) {
+        console.error("Error adding new note:", error);
+      }
     }
-  }
-};
+  };
 
   const toggleNoteCompletion = async (id) => {
     const updatedNotes = notes.map(note =>
@@ -207,6 +192,7 @@ useEffect(() => {
     setNotes(notes.filter(note => note.id !== id));
   };
 
+  // Event functions
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -232,22 +218,8 @@ useEffect(() => {
     return eventDate.toDateString() === currentDate.toDateString();
   });
 
-
-  // useEffect(() => {
-  //  calculateTodayExpenses();
- // }, [expenses]);
-
- // const calculateTodayExpenses = () => {
-   // const today = new Date();
-   // today.setHours(0, 0, 0, 0);
-
-
-   const filteredExpenses = expenses.filter(expense => {
-      const expenseDate = new Date(expense.date);
-      return expenseDate >= today && expenseDate < new Date(today.getTime() + 86400000);
-    });
-
-   const fetchTodayExpenses = async () => {
+  // Expense functions
+  const fetchTodayExpenses = async () => {
     if (auth.currentUser) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -268,7 +240,7 @@ useEffect(() => {
           date: doc.data().date.toDate(),
         }));
 
-        setExpenses(fetchedExpenses); // Set all expenses
+        setExpenses(fetchedExpenses);
 
         const filteredExpenses = fetchedExpenses.filter(expense => 
           expense.date >= today && expense.date < tomorrow
@@ -287,11 +259,7 @@ useEffect(() => {
     fetchTodayExpenses();
   }, []);
 
-  useEffect(() => {
-    // Adjust heights after render
-    adjustWidgetHeights();
-  }, [widgets]);
-
+  // Widget functions
   const adjustWidgetHeights = () => {
     const rows = {};
     widgets.forEach((widget, index) => {
@@ -310,62 +278,64 @@ useEffect(() => {
     });
   };
 
- const onDragEnd = async (result) => {
-  if (!result.destination) return;
-  const newWidgets = Array.from(widgets);
-  const [reorderedItem] = newWidgets.splice(result.source.index, 1);
-  newWidgets.splice(result.destination.index, 0, reorderedItem);
-  setWidgets(newWidgets);
+  useEffect(() => {
+    adjustWidgetHeights();
+  }, [widgets]);
 
-  // Save the new layout to Firestore
-  if (auth.currentUser) {
-    try {
-      const docRef = doc(db, 'dashboardLayouts', auth.currentUser.uid);
-      await setDoc(docRef, { widgets: newWidgets }, { merge: true });
-    } catch (error) {
-      console.error("Error saving dashboard layout:", error);
+  const onDragEnd = async (result) => {
+    if (!result.destination) return;
+    const newWidgets = Array.from(widgets);
+    const [reorderedItem] = newWidgets.splice(result.source.index, 1);
+    newWidgets.splice(result.destination.index, 0, reorderedItem);
+    setWidgets(newWidgets);
+
+    if (auth.currentUser) {
+      try {
+        const docRef = doc(db, 'dashboardLayouts', auth.currentUser.uid);
+        await setDoc(docRef, { widgets: newWidgets }, { merge: true });
+      } catch (error) {
+        console.error("Error saving dashboard layout:", error);
+      }
     }
-  }
-};
+  };
 
-  // Add this new function to get all available widget types
   const getAllWidgetTypes = () => {
     const currentTypes = widgets.map(w => w.type);
     const deletedTypes = deletedWidgets.map(w => w.type);
     return [...new Set([...currentTypes, ...deletedTypes])];
   };
 
- const addWidget = async (widgetType) => {
-  const newWidget = { id: `${widgetType}-${Date.now()}`, type: widgetType, size: 'third' };
-  const updatedWidgets = [...widgets, newWidget];
-  setWidgets(updatedWidgets);
-  setShowAddWidget(false);
+  const addWidget = async (widgetType) => {
+    const newWidget = { id: `${widgetType}-${Date.now()}`, type: widgetType, size: 'third' };
+    const updatedWidgets = [...widgets, newWidget];
+    setWidgets(updatedWidgets);
+    setShowAddWidget(false);
 
-  if (auth.currentUser) {
-    try {
-      const docRef = doc(db, 'dashboardLayouts', auth.currentUser.uid);
-      await setDoc(docRef, { widgets: updatedWidgets }, { merge: true });
-    } catch (error) {
-      console.error("Error saving dashboard layout:", error);
+    if (auth.currentUser) {
+      try {
+        const docRef = doc(db, 'dashboardLayouts', auth.currentUser.uid);
+        await setDoc(docRef, { widgets: updatedWidgets }, { merge: true });
+      } catch (error) {
+        console.error("Error saving dashboard layout:", error);
+      }
     }
-  }
-};
+  };
 
- const deleteWidget = async (id, type) => {
-  const widgetToDelete = widgets.find(w => w.id === id);
-  const newWidgets = widgets.filter(w => w.id !== id);
-  setWidgets(newWidgets);
-  setDeletedWidgets([...deletedWidgets, { ...widgetToDelete, id: `${type}-${Date.now()}` }]);
+  const deleteWidget = async (id, type) => {
+    const widgetToDelete = widgets.find(w => w.id === id);
+    const newWidgets = widgets.filter(w => w.id !== id);
+    setWidgets(newWidgets);
+    setDeletedWidgets([...deletedWidgets, { ...widgetToDelete, id: `${type}-${Date.now()}` }]);
 
-  if (auth.currentUser) {
-    try {
-      const docRef = doc(db, 'dashboardLayouts', auth.currentUser.uid);
-      await setDoc(docRef, { widgets: newWidgets }, { merge: true });
-    } catch (error) {
-      console.error("Error saving dashboard layout:", error);
+    if (auth.currentUser) {
+      try {
+        const docRef = doc(db, 'dashboardLayouts', auth.currentUser.uid);
+        await setDoc(docRef, { widgets: newWidgets }, { merge: true });
+      } catch (error) {
+        console.error("Error saving dashboard layout:", error);
+      }
     }
-  }
-};
+  };
 
   const changeWidgetSize = (id) => {
     setWidgets(widgets.map(widget => {
@@ -380,7 +350,6 @@ useEffect(() => {
   };
 
   const getWidgetWidth = (size) => {
-    // On mobile, always return 100%
     if (window.innerWidth <= 768) {
       return '100%';
     }
