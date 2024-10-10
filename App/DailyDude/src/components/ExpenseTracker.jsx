@@ -10,6 +10,8 @@ import { collection, addDoc, query, where, getDocs, deleteDoc, doc } from 'fireb
 import withSubscription from '../withSubscription';
 import { useSubscription } from '../SubscriptionContext';
 import UpgradeButton from './UpgradeButton';
+import Dashboard from './Dashboard';
+
 
 Modal.setAppElement('#root');
 
@@ -517,6 +519,7 @@ const ExpenseTracker = () => {
 
   return (
     <div className="bg-gray-100 p-6 rounded-lg shadow-lg dark:bg-dark-background-2 text-gray-800 dark:text-gray-400">
+      <Dashboard expenses={expenses} />
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-400">Expense Tracker</h2>
         <div className="flex space-x-4">
