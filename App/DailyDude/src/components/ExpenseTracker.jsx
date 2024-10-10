@@ -112,20 +112,16 @@ const ExpenseTracker = () => {
 
  const deleteTransaction = async (id, type) => {
   console.log(`Attempting to delete transaction: ${id}, type: ${type}`);
-  console.log('Current expenses:', expenses);
-  console.log('Current incomes:', incomes);
-
+  
   try {
+    // Attempt to delete from Firestore
     await deleteDoc(doc(db, 'transactions', id));
     console.log(`Document deleted from Firestore: ${id}`);
 
+    // Update local state
     if (type === 'expense') {
       setExpenses(prevExpenses => {
         console.log('Previous expenses:', prevExpenses);
-        if (!Array.isArray(prevExpenses)) {
-          console.error('prevExpenses is not an array:', prevExpenses);
-          return [];
-        }
         const newExpenses = prevExpenses.filter(expense => expense.id !== id);
         console.log('New expenses after deletion:', newExpenses);
         return newExpenses;
@@ -133,10 +129,6 @@ const ExpenseTracker = () => {
     } else {
       setIncomes(prevIncomes => {
         console.log('Previous incomes:', prevIncomes);
-        if (!Array.isArray(prevIncomes)) {
-          console.error('prevIncomes is not an array:', prevIncomes);
-          return [];
-        }
         const newIncomes = prevIncomes.filter(income => income.id !== id);
         console.log('New incomes after deletion:', newIncomes);
         return newIncomes;
@@ -144,14 +136,51 @@ const ExpenseTracker = () => {
     }
 
     console.log(`Transaction ${id} deleted successfully`);
+
+    // Refresh transactions after deletion
+    fetchTransactions();
   } catch (error) {
     console.error("Error deleting transaction: ", error);
   }
 };
 
- useEffect(() => {
+useEffect(() => {
   const fetchTransactions = async () => {
     if (auth.currentUser) {
+      try {
+        const q = query(collection(db, 'transactions'), where("userId", "==", auth.currentUser.uid));
+        const querySnapshot = await getDocs(q);
+        const fetchedTransactions = querySnapshot.docs.map(doc => ({
+          id: doc.id, // Ensure we're using the Firestore document ID
+          ...doc.data(),
+          date: doc.data().date.toDate(),
+        }));
+
+        console.log('Fetched transactions:', fetchedTransactions);
+
+        const fetchedExpenses = fetchedTransactions.filter(t => t.type === 'expense');
+        const fetchedIncomes = fetchedTransactions.filter(t => t.type === 'income');
+
+        console.log('Setting expenses:', fetchedExpenses);
+        console.log('Setting incomes:', fetchedIncomes);
+
+        setExpenses(fetchedExpenses);
+        setIncomes(fetchedIncomes);
+
+        const summary = getSummaryForTransactions(fetchedExpenses, fetchedIncomes);
+        setSummary(summary);
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+      }
+    }
+  };
+
+  fetchTransactions();
+}, []);
+
+  const fetchTransactions = async () => {
+  if (auth.currentUser) {
+    try {
       const q = query(collection(db, 'transactions'), where("userId", "==", auth.currentUser.uid));
       const querySnapshot = await getDocs(q);
       const fetchedTransactions = querySnapshot.docs.map(doc => ({
@@ -160,19 +189,25 @@ const ExpenseTracker = () => {
         date: doc.data().date.toDate(),
       }));
 
-      setExpenses(fetchedTransactions.filter(t => t.type === 'expense') || []);
-      setIncomes(fetchedTransactions.filter(t => t.type === 'income') || []);
+      console.log('Fetched transactions:', fetchedTransactions);
 
-      const summary = getSummaryForTransactions(
-        fetchedTransactions.filter(t => t.type === 'expense') || [],
-        fetchedTransactions.filter(t => t.type === 'income') || []
-      );
+      const fetchedExpenses = fetchedTransactions.filter(t => t.type === 'expense');
+      const fetchedIncomes = fetchedTransactions.filter(t => t.type === 'income');
+
+      console.log('Setting expenses:', fetchedExpenses);
+      console.log('Setting incomes:', fetchedIncomes);
+
+      setExpenses(fetchedExpenses);
+      setIncomes(fetchedIncomes);
+
+      const summary = getSummaryForTransactions(fetchedExpenses, fetchedIncomes);
       setSummary(summary);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
     }
-  };
+  }
+};
 
-  fetchTransactions();
-}, []);
 
   const getTransactionsInDateRange = () => {
     const [start, end] = dateRange;
