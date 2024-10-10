@@ -10,8 +10,6 @@ import { collection, addDoc, query, where, getDocs, deleteDoc, doc } from 'fireb
 import withSubscription from '../withSubscription';
 import { useSubscription } from '../SubscriptionContext';
 import UpgradeButton from './UpgradeButton';
-import Dashboard from './Dashboard';
-
 
 Modal.setAppElement('#root');
 
