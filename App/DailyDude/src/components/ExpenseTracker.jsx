@@ -111,43 +111,57 @@ const ExpenseTracker = () => {
   };
 
   const deleteTransaction = async (id, type) => {
-    try {
-      await deleteDoc(doc(db, 'transactions', id));
+  try {
+    await deleteDoc(doc(db, 'transactions', id));
 
-      if (type === 'expense') {
-        setExpenses(prevExpenses => prevExpenses.filter(expense => expense.id !== id));
-      } else {
-        setIncomes(prevIncomes => prevIncomes.filter(income => income.id !== id));
-      }
-    } catch (error) {
-      console.error("Error deleting transaction: ", error);
+    if (type === 'expense') {
+      setExpenses(prevExpenses => {
+        if (!Array.isArray(prevExpenses)) {
+          console.error('prevExpenses is not an array:', prevExpenses);
+          return [];
+        }
+        return prevExpenses.filter(expense => expense.id !== id);
+      });
+    } else {
+      setIncomes(prevIncomes => {
+        if (!Array.isArray(prevIncomes)) {
+          console.error('prevIncomes is not an array:', prevIncomes);
+          return [];
+        }
+        return prevIncomes.filter(income => income.id !== id);
+      });
+    }
+
+    console.log(`Transaction ${id} deleted successfully`);
+  } catch (error) {
+    console.error("Error deleting transaction: ", error);
+  }
+};
+
+ useEffect(() => {
+  const fetchTransactions = async () => {
+    if (auth.currentUser) {
+      const q = query(collection(db, 'transactions'), where("userId", "==", auth.currentUser.uid));
+      const querySnapshot = await getDocs(q);
+      const fetchedTransactions = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        date: doc.data().date.toDate(),
+      }));
+
+      setExpenses(fetchedTransactions.filter(t => t.type === 'expense') || []);
+      setIncomes(fetchedTransactions.filter(t => t.type === 'income') || []);
+
+      const summary = getSummaryForTransactions(
+        fetchedTransactions.filter(t => t.type === 'expense') || [],
+        fetchedTransactions.filter(t => t.type === 'income') || []
+      );
+      setSummary(summary);
     }
   };
 
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      if (auth.currentUser) {
-        const q = query(collection(db, 'transactions'), where("userId", "==", auth.currentUser.uid));
-        const querySnapshot = await getDocs(q);
-        const fetchedTransactions = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          date: doc.data().date.toDate(),
-        }));
-
-        setExpenses(fetchedTransactions.filter(t => t.type === 'expense'));
-        setIncomes(fetchedTransactions.filter(t => t.type === 'income'));
-
-        const summary = getSummaryForTransactions(
-          fetchedTransactions.filter(t => t.type === 'expense'),
-          fetchedTransactions.filter(t => t.type === 'income')
-        );
-        setSummary(summary);
-      }
-    };
-
-    fetchTransactions();
-  }, []);
+  fetchTransactions();
+}, []);
 
   const getTransactionsInDateRange = () => {
     const [start, end] = dateRange;
