@@ -39,6 +39,7 @@ export default async function handler(req, res) {
           },
         ],
         mode: 'subscription',
+        allow_promotion_codes: true,  
         success_url: `${process.env.DOMAIN}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.DOMAIN}/dashboard`,
         client_reference_id: userId,
