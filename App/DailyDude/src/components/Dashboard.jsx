@@ -625,6 +625,6 @@ useEffect(() => {
 )}
 </DragDropContext>
 );
-};
+;
 
 export default Dashboard;
