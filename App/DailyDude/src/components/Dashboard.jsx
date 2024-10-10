@@ -251,6 +251,42 @@ useEffect(() => {
     setTotalExpensesToday(total);
   };
 
+   useEffect(() => {
+    fetchTodayExpenses();
+  }, []);
+
+  const fetchTodayExpenses = async () => {
+    if (auth.currentUser) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const q = query(
+        collection(db, 'transactions'),
+        where("userId", "==", auth.currentUser.uid),
+        where("type", "==", "expense"),
+        where("date", ">=", today),
+        where("date", "<", tomorrow)
+      );
+
+      try {
+        const querySnapshot = await getDocs(q);
+        const fetchedExpenses = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          date: doc.data().date.toDate(),
+        }));
+
+        setTodayExpenses(fetchedExpenses);
+        const total = fetchedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+        setTotalExpensesToday(total);
+      } catch (error) {
+        console.error("Error fetching today's expenses:", error);
+      }
+    }
+  };
+
   useEffect(() => {
     // Adjust heights after render
     adjustWidgetHeights();
@@ -420,17 +456,17 @@ useEffect(() => {
           </div>
         );
               case 'ExpensesSummary':
-              return (
+        return (
           <div className="bg-white p-6 rounded-lg dark:bg-dark-background-2">
             <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-400">Today's Expenses</h2>
             <p className="text-xl text-gray-800 dark:text-gray-400 mb-4">Total: ${totalExpensesToday.toFixed(2)}</p>
             {todayExpenses.length > 0 ? (
               <ul className="space-y-2">
-                {todayExpenses.map((expense, index) => (
-                  <li key={index} className="flex justify-between items-center text-gray-800 dark:text-gray-400 border-b pb-2">
+                {todayExpenses.map((expense) => (
+                  <li key={expense.id} className="flex justify-between items-center text-gray-800 dark:text-gray-400 border-b pb-2">
                     <div>
-                      <span className="font-medium">{expense.description}</span>
-                      <span className="text-sm text-gray-500 ml-2">({expense.category})</span>
+                      <span className="font-medium">{expense.description || 'Unnamed expense'}</span>
+                      <span className="text-sm text-gray-500 ml-2">({expense.category || 'Uncategorized'})</span>
                     </div>
                     <span className="font-medium">${expense.amount.toFixed(2)}</span>
                   </li>
