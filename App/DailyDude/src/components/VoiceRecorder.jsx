@@ -270,7 +270,7 @@ const VoiceRecorder = () => {
     setLanguage(e.target.value);
   };
 
-  const RecordingItem = ({ recording, index }) => {
+ const RecordingItem = ({ recording, index }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [name, setName] = useState(recording.name);
 
@@ -294,6 +294,7 @@ const VoiceRecorder = () => {
               <div className="flex-grow">
                 <input
                   type="text"
+                  id={`recording-name-${recording.id}`} // Add this line
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   onBlur={() => handleNameChange(name)}
@@ -306,7 +307,7 @@ const VoiceRecorder = () => {
                 </button>
                 {isMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                    <a href={recording.url} download={`${name}.mp4`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center" target="_new">
+                    <a href={recording.url} download={`${name}.mp4`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center" target="_new" rel="noopener noreferrer">
                       <FaDownload className="mr-2" /> Download
                     </a>
                     <button onClick={() => deleteRecording(recording.id, recording.fileName)} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
