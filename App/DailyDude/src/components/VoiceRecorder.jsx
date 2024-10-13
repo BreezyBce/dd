@@ -241,18 +241,18 @@ const VoiceRecorder = () => {
   };
 
   const RecordingItem = ({ recording, index }) => {
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [name, setName] = useState(recording.name);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [name, setName] = useState(recording.name);
 
-    const handleNameChange = async (newName) => {
-      if (newName.trim() === recording.name) return;
-      await updateDoc(doc(db, "recordings", recording.id), { name: newName.trim() });
-    };
+  const handleNameChange = async (newName) => {
+    if (newName.trim() === recording.name) return;
+    await updateDoc(doc(db, "recordings", recording.id), { name: newName.trim() });
+  };
 
-    const handleMenuToggle = (e) => {
-      e.stopPropagation();
-      setIsMenuOpen(!isMenuOpen);
-    };
+  const handleMenuToggle = (e) => {
+    e.stopPropagation();
+    setIsMenuOpen(!isMenuOpen);
+  };
 
     return (
       <Draggable draggableId={recording.id} index={index}>
@@ -268,12 +268,14 @@ const VoiceRecorder = () => {
               </div>
               <div className="flex-grow">
                 <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  onBlur={() => handleNameChange(name)}
-                  className="bg-transparent border-b border-gray-400 focus:outline-none focus:border-blue-500"
-                />
+  type="text"
+  id={`recording-name-${recording.id}`}
+  name={`recording-name-${recording.id}`}
+  value={name}
+  onChange={(e) => setName(e.target.value)}
+  onBlur={() => handleNameChange(name)}
+  className="bg-transparent border-b border-gray-400 focus:outline-none focus:border-blue-500"
+/>
               </div>
               <div className="relative">
                 <button onClick={handleMenuToggle} className="text-gray-600 hover:text-gray-800">
