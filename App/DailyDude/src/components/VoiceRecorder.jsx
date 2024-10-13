@@ -221,8 +221,6 @@ const onDragEnd = (result) => {
   const [reorderedItem] = newRecordings.splice(result.source.index, 1);
   newRecordings.splice(result.destination.index, 0, reorderedItem);
 
-  setRecordings(newRecordings);
-};
 
     setRecordings(prevRecordings => {
       const updatedRecordings = Array.from(prevRecordings);
