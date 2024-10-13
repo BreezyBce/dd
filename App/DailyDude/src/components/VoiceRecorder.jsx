@@ -10,7 +10,6 @@ import UpgradeButton from './UpgradeButton';
 
 const VoiceRecorder = () => {
   const [isRecording, setIsRecording] = useState(false);
-  const { subscriptionStatus } = useSubscription();
   const [recordings, setRecordings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
