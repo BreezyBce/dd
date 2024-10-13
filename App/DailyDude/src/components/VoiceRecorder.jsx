@@ -4,6 +4,7 @@ import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, where, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage, db, auth } from '../firebase';
+import withSubscription from '../withSubscription';
 
 const VoiceRecorder = () => {
   const [isRecording, setIsRecording] = useState(false);
@@ -405,4 +406,4 @@ const VoiceRecorder = () => {
   );
 };
 
-export default VoiceRecorder;
+export default withSubscription(VoiceRecorder, 'premium');
