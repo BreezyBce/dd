@@ -345,15 +345,33 @@ useEffect(() => {
     );
   };
 
-  const onDragEnd = (result) => {
-    if (!result.destination) return;
+const onDragEnd = (result) => {
+  console.log('Drag ended:', result);  // Debug log
+  
+  // Check if we have all the necessary information
+  if (!result.destination || !result.source) {
+    console.log('Invalid drag: missing destination or source');  // Debug log
+    return;
+  }
 
-    const items = Array.from(recordings);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
+  // Check if the item was actually moved
+  if (
+    result.destination.droppableId === result.source.droppableId &&
+    result.destination.index === result.source.index
+  ) {
+    console.log('Item was not moved');  // Debug log
+    return;
+  }
 
-    setRecordings(items);
-  };
+  setRecordings(prevRecordings => {
+    const updatedRecordings = Array.from(prevRecordings);
+    const [reorderedItem] = updatedRecordings.splice(result.source.index, 1);
+    updatedRecordings.splice(result.destination.index, 0, reorderedItem);
+    
+    console.log('Updated recordings:', updatedRecordings);  // Debug log
+    return updatedRecordings;
+  });
+};
 
   if (loading) {
     return <div>Loading...</div>;
@@ -407,10 +425,17 @@ useEffect(() => {
             </div>
           )}
           <DragDropContext onDragEnd={onDragEnd}>
-            <Droppable droppableId="recordings">
-              {(provided) => (
-                <div {...provided.droppableProps} ref={provided.innerRef} className="mt-4 space-y-2">
-                  {recordings.map((recording, index) => (
+  <Droppable droppableId="recordings">
+    {(provided) => (
+      <div {...provided.droppableProps} ref={provided.innerRef}>
+        {recordings.map((recording, index) => (
+          <Draggable key={recording.id} draggableId={recording.id} index={index}>
+            {(provided) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.draggableProps}
+                {...provided.dragHandleProps}
+              >
                     <RecordingItem 
                       key={recording.id} 
                       recording={recording} 
@@ -418,11 +443,15 @@ useEffect(() => {
                     />
                   ))}
                   {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
-        </>
+                 </div>
+            )}
+          </Draggable>
+        ))}
+        {provided.placeholder}
+      </div>
+    )}
+  </Droppable>
+</DragDropContext>
       ) : (
         <div>Please log in to use the Voice Recorder.</div>
       )}
