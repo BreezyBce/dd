@@ -266,6 +266,10 @@ const VoiceRecorder = () => {
     setRecordings(items);
   };
 
+   const handleLanguageChange = (e) => {
+    setLanguage(e.target.value);
+  };
+
   const RecordingItem = ({ recording, index }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [name, setName] = useState(recording.name);
