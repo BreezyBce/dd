@@ -256,17 +256,7 @@ useEffect(() => {
     }
   };
 
-  const onDragEnd = (result) => {
-    if (!result.destination) return;
-
-    const items = Array.from(recordings);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    setRecordings(items);
-  };
-
-   const handleLanguageChange = (e) => {
+  const handleLanguageChange = (e) => {
     setLanguage(e.target.value);
   };
 
