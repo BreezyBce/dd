@@ -214,21 +214,15 @@ const VoiceRecorder = () => {
     }
   };
 
-  const onDragEnd = (result) => {
-    console.log('Drag ended:', result);  // Debug log
-    
-    if (!result.destination || !result.source) {
-      console.log('Invalid drag: missing destination or source');  // Debug log
-      return;
-    }
+const onDragEnd = (result) => {
+  if (!result.destination) return;
 
-    if (
-      result.destination.droppableId === result.source.droppableId &&
-      result.destination.index === result.source.index
-    ) {
-      console.log('Item was not moved');  // Debug log
-      return;
-    }
+  const newRecordings = Array.from(recordings);
+  const [reorderedItem] = newRecordings.splice(result.source.index, 1);
+  newRecordings.splice(result.destination.index, 0, reorderedItem);
+
+  setRecordings(newRecordings);
+};
 
     setRecordings(prevRecordings => {
       const updatedRecordings = Array.from(prevRecordings);
@@ -256,15 +250,15 @@ const VoiceRecorder = () => {
 
     return (
       <Draggable draggableId={recording.id} index={index}>
-        {(provided) => (
-          <div
-            ref={provided.innerRef}
-            {...provided.draggableProps}
-            className="flex flex-col bg-gray-100 p-3 rounded-lg mb-2"
-          >
-            <div className="flex items-center">
-              <div {...provided.dragHandleProps} className="mr-2 text-gray-500">
-                <FaGripVertical />
+      {(provided) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          className="flex flex-col bg-gray-100 p-3 rounded-lg mb-2"
+        >
+          <div className="flex items-center">
+            <div {...provided.dragHandleProps} className="mr-2 text-gray-500 cursor-move">
+              <FaGripVertical />
               </div>
               <div className="flex-grow">
                 <input
@@ -361,21 +355,21 @@ const VoiceRecorder = () => {
             </div>
           )}
           <DragDropContext onDragEnd={onDragEnd}>
-            <Droppable droppableId="recordings">
-              {(provided) => (
-                <div {...provided.droppableProps} ref={provided.innerRef} className="mt-4 space-y-2">
-                  {recordings.map((recording, index) => (
-                    <RecordingItem 
-                      key={recording.id} 
-                      recording={recording} 
-                      index={index}
-                    />
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
+          <Droppable droppableId="recordings">
+            {(provided) => (
+              <div {...provided.droppableProps} ref={provided.innerRef}>
+                {recordings.map((recording, index) => (
+                  <RecordingItem 
+                    key={recording.id} 
+                    recording={recording} 
+                    index={index}
+                  />
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
         </>
       ) : (
         <div>Please log in to use the Voice Recorder.</div>
