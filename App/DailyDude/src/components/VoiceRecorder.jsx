@@ -1,11 +1,9 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { FaEllipsisV, FaDownload, FaTrash, FaShare, FaGripVertical } from 'react-icons/fa';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, where, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage, db, auth } from '../firebase';
-import withSubscription from '../withSubscription';
 
 const VoiceRecorder = () => {
   const [isRecording, setIsRecording] = useState(false);
@@ -99,6 +97,7 @@ const VoiceRecorder = () => {
       await uploadBytes(fileRef, audioBlob);
       const downloadURL = await getDownloadURL(fileRef);
 
+      // Start transcription and wait for it to complete
       const transcription = await startTranscription(audioBlob, language);
 
       const docRef = await addDoc(collection(db, "recordings"), {
@@ -146,7 +145,7 @@ const VoiceRecorder = () => {
           for (let i = event.resultIndex; i < event.results.length; i++) {
             const transcript = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
-              fullTranscript += transcript;
+              fullTranscript += formatSentence(transcript, language);
             } else {
               interimTranscript += transcript;
             }
@@ -166,6 +165,7 @@ const VoiceRecorder = () => {
           reject(event.error);
         };
 
+        // Convert blob to audio element and play
         const audioUrl = URL.createObjectURL(audioBlob);
         const audio = new Audio(audioUrl);
         audio.addEventListener('ended', () => {
@@ -181,6 +181,47 @@ const VoiceRecorder = () => {
         reject(error);
       }
     });
+  };
+
+  const formatSentence = (sentence, language) => {
+    sentence = sentence.trim();
+    
+    // Capitalize the first letter
+    sentence = sentence.charAt(0).toUpperCase() + sentence.slice(1);
+
+    // Add appropriate punctuation
+    if (isQuestion(sentence, language)) {
+      sentence += '? ';
+    } else {
+      sentence += '. ';
+    }
+
+    return sentence;
+  };
+
+  const isQuestion = (sentence, language) => {
+    const questionWords = {
+      'en-US': /^(who|what|when|where|why|how|is|are|am|do|does|did|can|could|would|should|has|have)\b/i,
+      'fr-FR': /^(qui|que|quoi|quand|où|pourquoi|comment|est-ce que|est-ce qu')\b/i,
+      'zh-CN': /^(谁|什么|何时|哪里|为什么|怎么|吗|呢|吧)\b/i
+    };
+
+    return questionWords[language].test(sentence.trim());
+  };
+
+  const updateRecording = async (id, updatedFields) => {
+    try {
+      const recordingRef = doc(db, "recordings", id);
+      await updateDoc(recordingRef, updatedFields);
+      setRecordings(prevRecordings => 
+        prevRecordings.map(rec => 
+          rec.id === id ? { ...rec, ...updatedFields } : rec
+        )
+      );
+    } catch (error) {
+      console.error("Error updating recording:", error);
+      setError("Failed to update recording. Please try again.");
+    }
   };
 
   const deleteRecording = async (id, fileName) => {
@@ -214,68 +255,57 @@ const VoiceRecorder = () => {
     }
   };
 
-const onDragEnd = (result) => {
-  if (!result.destination) return;
+  const onDragEnd = (result) => {
+    if (!result.destination) return;
 
-  const newRecordings = Array.from(recordings);
-  const [reorderedItem] = newRecordings.splice(result.source.index, 1);
-  newRecordings.splice(result.destination.index, 0, reorderedItem);
+    const items = Array.from(recordings);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
 
+    setRecordings(items);
+  };
 
-    setRecordings(prevRecordings => {
-      const updatedRecordings = Array.from(prevRecordings);
-      const [reorderedItem] = updatedRecordings.splice(result.source.index, 1);
-      updatedRecordings.splice(result.destination.index, 0, reorderedItem);
-      
-      console.log('Updated recordings:', updatedRecordings);  // Debug log
-      return updatedRecordings;
-    });
+  const handleLanguageChange = (e) => {
+    setLanguage(e.target.value);
   };
 
   const RecordingItem = ({ recording, index }) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [name, setName] = useState(recording.name);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [name, setName] = useState(recording.name);
 
-  const handleNameChange = async (newName) => {
-    if (newName.trim() === recording.name) return;
-    await updateDoc(doc(db, "recordings", recording.id), { name: newName.trim() });
-  };
-
-  const handleMenuToggle = (e) => {
-    e.stopPropagation();
-    setIsMenuOpen(!isMenuOpen);
-  };
+    const handleNameChange = async (newName) => {
+      if (newName.trim() === recording.name) return;
+      await updateRecording(recording.id, { name: newName.trim() });
+    };
 
     return (
       <Draggable draggableId={recording.id} index={index}>
-      {(provided) => (
-        <div
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          className="flex flex-col bg-gray-100 p-3 rounded-lg mb-2"
-        >
-          <div className="flex items-center">
-            <div {...provided.dragHandleProps} className="mr-2 text-gray-500 cursor-move">
-              <FaGripVertical />
+        {(provided) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            className="flex flex-col bg-gray-100 p-3 rounded-lg mb-2"
+          >
+            <div className="flex items-center">
+              <div {...provided.dragHandleProps} className="mr-2 text-gray-500">
+                <FaGripVertical />
               </div>
               <div className="flex-grow">
                 <input
-  type="text"
-  id={`recording-name-${recording.id}`}
-  name={`recording-name-${recording.id}`}
-  value={name}
-  onChange={(e) => setName(e.target.value)}
-  onBlur={() => handleNameChange(name)}
-  className="bg-transparent border-b border-gray-400 focus:outline-none focus:border-blue-500"
-/>
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onBlur={() => handleNameChange(name)}
+                  className="bg-transparent border-b border-gray-400 focus:outline-none focus:border-blue-500"
+                />
               </div>
               <div className="relative">
-                <button onClick={handleMenuToggle} className="text-gray-600 hover:text-gray-800">
+                <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 hover:text-gray-800">
                   <FaEllipsisV />
                 </button>
                 {isMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                    <a href={recording.url} download={`${name}.mp4`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center" target="_blank" rel="noopener noreferrer">
+                    <a href={recording.url} download={`${name}.mp4`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center" target="_new">
                       <FaDownload className="mr-2" /> Download
                     </a>
                     <button onClick={() => deleteRecording(recording.id, recording.fileName)} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
@@ -319,7 +349,7 @@ const onDragEnd = (result) => {
             <select
               id="language-select"
               value={language}
-              onChange={(e) => setLanguage(e.target.value)}
+              onChange={handleLanguageChange}
               className="w-full p-2 border rounded"
             >
               <option value="en-US">English</option>
@@ -353,21 +383,20 @@ const onDragEnd = (result) => {
             </div>
           )}
           <DragDropContext onDragEnd={onDragEnd}>
-          <Droppable droppableId="recordings">
-            {(provided) => (
-              <div {...provided.droppableProps} ref={provided.innerRef}>
-                {recordings.map((recording, index) => (
-                  <RecordingItem 
-                    key={recording.id} 
-                    recording={recording} 
-                    index={index}
-                  />
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
+            <Droppable droppableId="recordings">
+              {(provided) => (<div {...provided.droppableProps} ref={provided.innerRef} className="mt-4 space-y-2">
+                  {recordings.map((recording, index) => (
+                    <RecordingItem 
+                      key={recording.id} 
+                      recording={recording} 
+                      index={index}
+                    />
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
         </>
       ) : (
         <div>Please log in to use the Voice Recorder.</div>
@@ -376,4 +405,4 @@ const onDragEnd = (result) => {
   );
 };
 
-export default withSubscription(VoiceRecorder, 'premium');
+export default VoiceRecorder;
