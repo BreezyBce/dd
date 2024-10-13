@@ -273,14 +273,25 @@ const VoiceRecorder = () => {
  const RecordingItem = ({ recording, index }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [name, setName] = useState(recording.name);
+    const [isInteracting, setIsInteracting] = useState(false);
 
     const handleNameChange = async (newName) => {
       if (newName.trim() === recording.name) return;
       await updateRecording(recording.id, { name: newName.trim() });
     };
 
+    const handlePlay = (e) => {
+      e.stopPropagation();
+      // Your play logic here (if needed)
+    };
+
+    const handleMenuToggle = (e) => {
+      e.stopPropagation();
+      setIsMenuOpen(!isMenuOpen);
+    };
+
     return (
-      <Draggable draggableId={recording.id} index={index}>
+      <Draggable draggableId={recording.id} index={index} disableInteractiveElementBlocking>
         {(provided) => (
           <div
             ref={provided.innerRef}
@@ -294,7 +305,7 @@ const VoiceRecorder = () => {
               <div className="flex-grow">
                 <input
                   type="text"
-                  id={`recording-name-${recording.id}`} // Add this line
+                  id={`recording-name-${recording.id}`}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   onBlur={() => handleNameChange(name)}
@@ -302,12 +313,12 @@ const VoiceRecorder = () => {
                 />
               </div>
               <div className="relative">
-                <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 hover:text-gray-800">
+                <button onClick={handleMenuToggle} className="text-gray-600 hover:text-gray-800">
                   <FaEllipsisV />
                 </button>
                 {isMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                    <a href={recording.url} download={`${name}.mp4`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center" target="_new" rel="noopener noreferrer">
+                    <a href={recording.url} download={`${name}.mp4`} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center" target="_blank" rel="noopener noreferrer">
                       <FaDownload className="mr-2" /> Download
                     </a>
                     <button onClick={() => deleteRecording(recording.id, recording.fileName)} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
@@ -320,7 +331,17 @@ const VoiceRecorder = () => {
                 )}
               </div>
             </div>
-            <audio src={recording.url} controls className="mt-2 w-full" />
+            <div
+              onMouseEnter={() => setIsInteracting(true)}
+              onMouseLeave={() => setIsInteracting(false)}
+            >
+              <audio 
+                src={recording.url} 
+                controls 
+                className="mt-2 w-full"
+                onPlay={handlePlay}
+              />
+            </div>
             {recording.transcription && (
               <div className="mt-2">
                 <h4 className="font-semibold">Transcription:</h4>
@@ -331,6 +352,16 @@ const VoiceRecorder = () => {
         )}
       </Draggable>
     );
+  };
+
+  const onDragEnd = (result) => {
+    if (!result.destination) return;
+
+    const items = Array.from(recordings);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setRecordings(items);
   };
 
   if (loading) {
@@ -351,7 +382,7 @@ const VoiceRecorder = () => {
             <select
               id="language-select"
               value={language}
-              onChange={handleLanguageChange}
+              onChange={(e) => setLanguage(e.target.value)}
               className="w-full p-2 border rounded"
             >
               <option value="en-US">English</option>
@@ -386,7 +417,8 @@ const VoiceRecorder = () => {
           )}
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="recordings">
-              {(provided) => (<div {...provided.droppableProps} ref={provided.innerRef} className="mt-4 space-y-2">
+              {(provided) => (
+                <div {...provided.droppableProps} ref={provided.innerRef} className="mt-4 space-y-2">
                   {recordings.map((recording, index) => (
                     <RecordingItem 
                       key={recording.id} 
