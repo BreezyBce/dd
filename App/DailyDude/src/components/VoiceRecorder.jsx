@@ -275,10 +275,6 @@ const VoiceRecorder = () => {
       await updateRecording(recording.id, { name: newName.trim() });
     };
 
-    const handleNameChange = async (newName) => {
-      if (newName.trim() === recording.name) return;
-      await updateRecording(recording.id, { name: newName.trim() });
-    };
 
     return (
       <Draggable draggableId={recording.id} index={index}>
