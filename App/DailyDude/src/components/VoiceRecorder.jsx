@@ -1,6 +1,4 @@
-I apologize for the confusion. I'll provide you with the entire updated VoiceRecorder component, incorporating all the changes we've discussed, including the improved drag and drop functionality. Here's the full, revised code:
 
-```jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { FaEllipsisV, FaDownload, FaTrash, FaShare, FaGripVertical } from 'react-icons/fa';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
